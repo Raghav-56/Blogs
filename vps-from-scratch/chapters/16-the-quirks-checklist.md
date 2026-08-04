@@ -90,7 +90,12 @@ This is the page to keep open.
   `http:// { respond 444 }` in Caddy). Otherwise anyone pointing DNS at your IP gets your
   site.
 - **Always `nginx -t` / `caddy validate` before reload.** With `set -e` in a script, a bad
-  config becomes a failed deploy instead of an outage.
+  config becomes a failed deploy instead of an outage. It earns its keep: I once saved a
+  backup as `mysite.caddy.bak` *inside* `sites-enabled/`, and since the import is a bare
+  `*` glob it loaded the backup too and died on a duplicate snippet. Validate refused, the
+  reload never ran, the live site never noticed.
+- **`import dir/*` imports every file in that directory**, whatever the extension. Keep
+  backups, drafts, and `.bak` files somewhere else entirely.
 - `reload` is graceful, `restart` drops connections. Use reload for config changes.
 - `caddy validate` fails as a non-root user because it cannot open the log file. Not a
   config error.
