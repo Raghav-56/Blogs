@@ -92,6 +92,62 @@ without the supervisor, it is public.
 **A safe value in your config beats a clever default in your code. An unsafe default in
 your code is a trap with a timer on it.**
 
+### When `0.0.0.0` is the right answer
+
+Important caveat, because this chapter will otherwise strand you.
+
+If you have **no reverse proxy yet**, `0.0.0.0` is correct and `127.0.0.1` will drive you
+mad. Loopback means nothing outside the machine can reach it, including you, from your
+laptop. On my first server that was exactly the confusion:
+
+```
+INFO:     Uvicorn running on http://localhost:8086
+```
+
+Port opened in the cloud console, port opened in the firewall, and still nothing, because
+the app was bound to loopback and no proxy existed to bridge the gap. The fix at that
+stage was `host="0.0.0.0"`, and it was the right fix.
+
+Chapters 07 and 10 change the answer. Once a proxy owns 80 and 443 and terminates TLS,
+every backend goes back to loopback and the proxy is the only thing exposed.
+
+So:
+
+| Stage | Bind | Why |
+|---|---|---|
+| No proxy, just getting online | `0.0.0.0` + firewall rule | nothing else can reach it |
+| Proxy in front (from chapter 07 on) | `127.0.0.1` | the proxy is the only public door |
+
+Same question, opposite correct answers, depending on what else is running. If a tutorial
+tells you to bind `0.0.0.0`, check which of these two worlds it is written for.
+
+### Why you have two IP addresses
+
+One more thing that confuses everyone on Oracle specifically:
+
+```
+$ ip addr show
+2: ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 ...
+    inet 10.0.0.228/24 metric 100 brd 10.0.0.255 scope global ens3
+
+$ curl ifconfig.me
+140.245.219.236
+```
+
+Two different addresses, and the machine only knows about one of them.
+
+`10.0.0.228` is the **private** address inside Oracle's virtual network. It is the only
+one the operating system can see, and the only one you can bind to. `140.245.219.236` is
+the **public** address, which lives on Oracle's gateway and is mapped to your private
+address by NAT.
+
+So `ip addr show` will never show your public IP, and you cannot bind to it. This is why
+`0.0.0.0` matters: it means "every interface I have", which includes the private address
+that public traffic actually arrives on after translation. Binding to the public IP
+literally fails, because the machine does not have it.
+
+Find your public IP in the console, or with `curl ifconfig.me`.
+
 ## Layer 2: the firewall, and the Oracle surprise
 
 Every tutorial you will read says:

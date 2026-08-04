@@ -32,6 +32,27 @@ Most tutorials will hand you PM2, and PM2 is a perfectly good answer. The concep
 transfer directly; oxmgr even reads PM2 `ecosystem.config.js` files and can convert them.
 What matters is understanding what the layer is for.
 
+Here is the honest cost of picking a small, fast-moving tool. My config from three weeks
+earlier, against the one running today:
+
+```toml
+# July                                  # August
+restart_policy = "on-failure"           restart_policy = "on_failure"    (underscore now)
+env_file = ".env"                       (removed, env declared inline)
+wait_ready = true                       (removed)
+ready_timeout_secs = 30                 (removed)
+stdout = "/var/log/..."                 [apps.logs] stdout = "..."
+```
+
+A hyphen became an underscore in an enum value, two keys disappeared, and two more moved
+into a subsection. Five breaking changes in one small file in under a month. PM2's format
+has been stable for years. That is a real argument for PM2 and against what I chose, and
+you should weigh it.
+
+Note what got lost in particular: `wait_ready = true` with `ready_timeout_secs = 30` meant
+the *new* process had to pass its health check before the old one was stopped. That is a
+zero-downtime reload, and my current config does not have it.
+
 ```bash
 cargo install --git https://github.com/Vladimir-Urik/OxMgr
 ```

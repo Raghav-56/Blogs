@@ -118,9 +118,62 @@ The same applies to server logs. This box's proxy log files are `0600 caddy:cadd
 is correct, and which is also why the log shipper (running as a different user) needs
 thought. Restrictive permissions create real friction. That is what they are for.
 
-## Privilege separation
+## Privilege separation, and the 403 that caused it
 
 The other half of "who can read what" is "what can the web server reach".
+
+I did not design this part. I hit it.
+
+First attempt at serving the site, the proxy config pointed straight at the repo:
+
+```caddyfile
+root * /home/ubuntu/raghav/raghav56.tech/
+```
+
+and every request returned:
+
+```
+$ curl -v https://raghav56.tech
+< HTTP/2 403
+< server: Caddy
+< content-length: 0
+```
+
+A 403 with **zero bytes of explanation**. TLS was fine. Routing was fine. The file
+existed. `ls -l` said it was world readable:
+
+```
+-rw-rw-r-- 1 ubuntu ubuntu index.txt
+```
+
+### The command that solves this in one line
+
+```
+$ namei -l /home/ubuntu/raghav/raghav56.tech/static/index.txt
+f: /home/ubuntu/raghav/raghav56.tech/static/index.txt
+drwxr-xr-x root   root   /
+drwxr-xr-x root   root   home
+drwxr-x--- ubuntu ubuntu ubuntu          ← 750
+drwx------ ubuntu ubuntu raghav          ← 700, and there it is
+drwxrwxr-x ubuntu ubuntu raghav56.tech
+drwxrwxr-x ubuntu ubuntu static
+-rw-rw-r-- ubuntu ubuntu index.txt
+```
+
+`namei -l` walks every component of a path and prints its permissions. Learn it now; it
+turns a whole category of "permission denied on a file that is obviously readable" into a
+five-second answer.
+
+The rule it makes visible: **directory permissions compose.** To read a file you need
+execute (traverse) on *every* directory above it. `index.txt` being world readable is
+irrelevant when `/home/ubuntu/raghav` two levels up is `700`. `ls -l` on the file tells
+you nothing useful, which is exactly why the error is so confusing.
+
+The obvious fix is `chmod 755` on your home directory. Do not do that. It makes every
+project, key, and dotfile in your home directory readable by every account on the machine,
+to fix one file.
+
+The right fix is the boundary:
 
 | Path | Owner | Mode | Web server access |
 |---|---|---|---|
@@ -132,6 +185,9 @@ proxy **cannot read it at all**. Not "is configured not to". Cannot.
 
 The build compiles into `dist/` and rsyncs the compiled output across the boundary into
 `/var/www/`. The public web root contains HTML, CSS, images, and nothing else.
+
+The 403 was not a problem to work around. It was the filesystem telling me the
+architecture was wrong.
 
 Why this matters: a path traversal bug in any file server, yours or someone else's, is the
 difference between leaking your compiled HTML (which is already public) and leaking your

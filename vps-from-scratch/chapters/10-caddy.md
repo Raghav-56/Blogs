@@ -129,6 +129,36 @@ sized log. The rotation is not theoretical: `/var/log/caddy/` on this box holds 
 alongside rolled `.gz` archives, and none of them is growing without limit. "My disk
 filled up with access logs" is a genuine first-year outage and this prevents it.
 
+### One warning about placeholders
+
+`{http.request.uuid}` in that snippet is spelled exactly right, and it took a while to get
+there. My earlier config said:
+
+```caddyfile
+header {
+    X-Request-ID {http.request.id}
+}
+```
+
+which produced this in every response, for weeks:
+
+```
+< x-request-id: {http.request.id}
+```
+
+The literal string. There is no `{http.request.id}` placeholder in Caddy, and **an unknown
+placeholder is not an error**. It is emitted verbatim. The config validates, the server
+reloads, the header appears, and it is the same constant on every single response.
+
+This is the failure mode of every templating system: a typo in a variable name does not
+crash, it silently ships. Check yours:
+
+```bash
+curl -sI https://yoursite/ | grep -i request-id
+```
+
+If you see braces in the output, the placeholder is wrong.
+
 ## handle, route, and matchers
 
 Two directives that look similar and behave differently.

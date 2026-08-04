@@ -6,8 +6,22 @@ Both need port 443. There is one port 443.
 
 ## What a reverse proxy is
 
-A single program that owns ports 80 and 443, looks at the `Host` header of each incoming
-request, and forwards it to whichever local service should handle it.
+The way I ended up explaining this to a friend, which is the version that stuck:
+
+**The proxy is a receptionist.**
+
+The public IP is the building's front entrance. The receptionist sits at the desk. Your
+backend services are departments upstairs. Nobody walks in off the street and straight
+into a department. Everyone talks to the desk first, and the desk decides which room they
+are sent to.
+
+Which answers the question that confused me for a long time: *if my backend is on
+`127.0.0.1`, how is anyone on the internet using it?*
+
+They are not. They are talking to the receptionist. The backend never became public.
+
+Concretely: a single program that owns ports 80 and 443, looks at the `Host` header of
+each incoming request, and forwards it to whichever local service should handle it.
 
 ```
                           ┌─ Host: raghav56.tech    → 127.0.0.1:2056

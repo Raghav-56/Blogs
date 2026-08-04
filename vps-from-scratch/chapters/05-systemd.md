@@ -74,8 +74,82 @@ sudo systemctl status myapp
 bugs: `start` without `enable` means it works until you reboot, and `enable` without
 `--now` means it does nothing until you reboot.
 
+`enable` prints what it actually did, and it is worth reading once:
+
+```
+$ sudo systemctl enable agent
+Created symlink /etc/systemd/system/multi-user.target.wants/agent.service → /etc/systemd/system/agent.service.
+```
+
+That is the entire mechanism. `WantedBy=multi-user.target` in your file tells `enable`
+which directory to symlink into. There is no database.
+
 `daemon-reload` after every edit. Without it systemd is still running your old file and
 you will conclude the change did nothing.
+
+## The three errors you will actually hit
+
+Here is my first unit file, from an earlier server, before I knew any of the above:
+
+```ini
+[Service]
+User=ubuntu
+WorkingDirectory=~/raghav/Agent_kdg
+ExecStart=uv run main.py
+StandardOutput=append:logs/server.log
+StandardError=append:logs/errors.log
+```
+
+Four mistakes. This is what systemd said:
+
+```
+Failed to start agent.service: Unit agent.service has a bad unit file setting.
+
+× agent.service - Agent_kdg FastAPI Server
+     Loaded: bad-setting (Reason: Unit agent.service has a bad unit file setting.)
+     Active: failed (Result: exit-code)
+   Main PID: 3476 (code=exited, status=203/EXEC)
+
+systemd[1]: /etc/systemd/system/agent.service:6: WorkingDirectory= path is not absolute: ~/raghav/Agent_kdg
+systemd[1]: agent.service: Unit configuration has fatal error, unit will not be started.
+```
+
+Three strings to recognise:
+
+**`path is not absolute: ~/...`**: systemd does not expand `~`. Tilde expansion is a
+*shell* feature and there is no shell here. Same for `$HOME`, `*`, and `&&`. Write
+`/home/ubuntu/...` in full.
+
+**`status=203/EXEC`**: systemd could not execute the thing you named. Almost always a
+wrong path, a missing file, or a missing execute bit. Check with `ls -l` on the exact
+string in `ExecStart`.
+
+**`Loaded: bad-setting`**: the unit file itself is invalid, so it was never even
+attempted. Nothing ran. Distinguish this from `Loaded: loaded` plus `Active: failed`,
+which means the file was fine and your program exited.
+
+A fourth, quieter one: relative paths in `StandardOutput=append:logs/server.log` are
+resolved against `/`, not against `WorkingDirectory`. Always absolute.
+
+And the trap that catches everyone once, which is the whole of chapter 03 arriving on
+schedule:
+
+```
+$ sudo systemctl start agent
+$ pgrep -f "uv run main.py"
+$            # nothing. no error. no output.
+```
+
+`enable` succeeded and `start` succeeded and nothing was running, because `ExecStart` said
+`uv` and systemd has no idea where that is. Your PATH is not its PATH. The version that
+finally worked:
+
+```ini
+ExecStart=/home/ubuntu/.local/bin/uv run main.py
+Environment="PATH=/usr/local/bin:/usr/bin:/bin:/home/ubuntu/.local/bin"
+```
+
+`which uv` tells you the path to paste. Then it ran for four days without being touched.
 
 ## Logs
 
@@ -129,6 +203,21 @@ npm run dev
      └─ nodemon
          └─ node src/index.js      ← the actual server
 ```
+
+`systemctl status` shows you this, and it is worth learning to read. From the working
+FastAPI service on my earlier server:
+
+```
+   Main PID: 537 (uv)
+     CGroup: /system.slice/agent.service
+             ├─537 /home/ubuntu/.local/bin/uv run main.py
+             └─634 /home/ubuntu/raghav/Agent_kdg/.venv/bin/python3 main.py
+```
+
+`Main PID` is 537, the wrapper. The process actually answering HTTP is 634. systemd
+tracks the whole cgroup, so it will clean everything up on stop, but every decision it
+makes is about 537. Whenever `Main PID` names a launcher (`npm`, `uv`, `sh`, `poetry`)
+rather than your program, restart semantics are weaker than they look.
 
 systemd is supervising `npm`. The thing serving traffic is four processes away. If node
 crashes, nodemon quietly restarts it and systemd never learns anything happened. If node

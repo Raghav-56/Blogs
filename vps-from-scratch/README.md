@@ -62,14 +62,21 @@ enough of a model of binding, firewalls, and proxies to debug the next thing you
 ## Repository layout
 
 ```
-chapters/    the series, in order, plain markdown
-research/    the harvested source material every chapter is built on:
-             verbatim configs, exact command output, file paths
-OUTLINE.md   narrative spine, word budget, magazine cuts
+chapters/      the series, in order, plain markdown
+research/      the harvested source material every chapter is built on:
+               verbatim configs, exact command output, file paths
+Chat_exports/  old ChatGPT logs from Nov 2025 to Aug 2026, kept as primary sources
+OUTLINE.md     narrative spine, word budget, magazine cuts
 ```
 
 `research/` is the fact-checked source of truth. Nothing in a chapter asserts something
 that is not in there. If you want the raw configs rather than the prose, read that folder.
+
+`Chat_exports/` is where the error messages came from. The live box shows you what works;
+those logs show what failed first, with timestamps, including a whole earlier server from
+seven months before this one. `research/11-chat-archaeology.md` is the extract. They also
+contain at least one credential I pasted while debugging, which is its own lesson and is
+noted there.
 
 ## A note on what is redacted
 

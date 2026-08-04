@@ -62,6 +62,16 @@ Every request gets a unique ID in its response headers. When a user reports a pr
 can give you the ID, you can find that exact request in the logs. Cheap, and hugely
 useful the day you need it.
 
+Verify it actually works, because an unknown placeholder in Caddy is emitted as literal
+text rather than raising an error. Mine said `{http.request.id}` for weeks, which is not a
+real placeholder, and every response carried that exact string as its "unique" ID:
+
+```bash
+curl -sI https://yoursite/ | grep -i request-id
+```
+
+Braces in the output mean the placeholder name is wrong. Chapter 10 has the details.
+
 Caddy writes JSON, so `jq` is your query language:
 
 ```bash

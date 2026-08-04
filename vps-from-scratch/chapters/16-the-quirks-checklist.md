@@ -49,6 +49,12 @@ This is the page to keep open.
 
 ## Ports and binding
 
+- **`ip addr show` never shows your public IP.** Oracle gives the OS a private `10.x`
+  address and NATs the public one at the gateway. You cannot bind the public address.
+  `curl ifconfig.me` to see it.
+- **Bind `0.0.0.0` until you have a reverse proxy, `127.0.0.1` after.** Both are correct
+  for their stage. A tutorial telling you one or the other is written for one of those two
+  worlds.
 - **`app.listen(PORT)` with no host binds `0.0.0.0`**, every interface, the public
   internet included. Pass `"127.0.0.1"`.
 - Read the **Local Address** column of `ss -tlnp`, not the port.
@@ -141,6 +147,20 @@ This is the page to keep open.
 
 ## systemd
 
+- **`path is not absolute: ~/...`**: systemd does not expand `~`, `$HOME`, globs, or
+  `&&`. There is no shell.
+- **`status=203/EXEC`** means systemd could not execute what you named. Wrong path,
+  missing file, or missing execute bit.
+- **`Loaded: bad-setting`** means the unit file is invalid and nothing ever ran. Different
+  from `Loaded: loaded` + `Active: failed`, which means your program exited.
+- Relative paths in `StandardOutput=append:logs/app.log` resolve against `/`, not
+  `WorkingDirectory`.
+- `start` and `enable` can both succeed with nothing running, if `ExecStart` names a
+  binary systemd cannot find. Check `pgrep`, not the exit code.
+- `systemctl enable` just creates a symlink into `<target>.wants/`. That is the whole
+  mechanism.
+- Read `Main PID` in `systemctl status`. If it names `npm`, `uv`, `sh`, or `poetry` rather
+  than your program, systemd is supervising a launcher.
 - `daemon-reload` after **every** unit file edit, or you are running the old file.
 - `enable` and `start` are different. `start` alone dies at reboot; `enable` alone does
   nothing until reboot. Use `enable --now`.
@@ -185,8 +205,15 @@ This is the page to keep open.
 
 ## Secrets
 
+- **A 403 with `content-length: 0` from a file server is almost always a directory
+  permission**, not a missing file. Run `namei -l /full/path/to/file`.
+- **Directory permissions compose.** You need traverse on every directory above a file.
+  `ls -l` on the file itself tells you nothing. The fix is a public web root, never
+  `chmod 755 ~`.
 - **Gitignored is not safe.** Mode `664` on a multi-user box means everyone can read your
   key. `chmod 600`.
+- **Never paste a config containing a password hash into a chat, an issue, or a gist.**
+  You will export that chat later and commit it. Ask me how I know.
 - Commit `*.template` and `.env.example` beside every gitignored config, so the shape is
   documented.
 - Document what happens when an optional key is **absent**, so the project runs without
@@ -214,6 +241,12 @@ This is the page to keep open.
 - Services that bind `0.0.0.0` and are protected only by the firewall are one
   `iptables -F` away from public.
 
+## Proxy config
+
+- **An unknown Caddy placeholder is not an error, it is emitted as literal text.** Mine
+  shipped `x-request-id: {http.request.id}` for weeks. Verify with
+  `curl -sI https://yoursite/`.
+
 ## The general ones
 
 - Three layers must agree for a packet to arrive: bind address, host firewall, cloud
@@ -221,5 +254,10 @@ This is the page to keep open.
 - If it works interactively and fails from a machine, it is PATH or environment. Every
   time.
 - Templates drift from live config. Wildcards hide the drift.
+- **Check confident advice against your own box.** It is usually one command. I was told
+  `nohup` forks a child and that this explained a PID mismatch. It does not fork; it
+  `exec`s. The actual bug was a stale process from an hour earlier holding the port.
+- The answer to "should I bind `0.0.0.0`?" changes when you add a proxy. Advice has a
+  timestamp and an assumed stack; check which one it was written for.
 - Write down the things you found wrong with your own setup. This series has a list, and
   writing it was more useful than any of the configuration.

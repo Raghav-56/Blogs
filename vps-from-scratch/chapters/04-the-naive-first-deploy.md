@@ -18,15 +18,78 @@ Every one of these has an obvious wrong fix that mostly works, and that is the p
 ## Wrong fix one: nohup
 
 ```bash
-nohup bun run server.js &
+nohup bun run server.js > app.log 2>&1 &
 ```
 
-`nohup` ignores the hangup signal, so the process survives your SSH session ending.
+Worth breaking apart, because most people copy this without reading it:
 
-It genuinely works. It also means: no log rotation (`nohup.out` grows until the disk is
+| Part | Meaning |
+|---|---|
+| `nohup` | ignore `SIGHUP`, the signal your shell sends its children when it exits |
+| `> app.log` | send stdout to a file instead of the terminal |
+| `2>&1` | send stderr (fd 2) to wherever stdout (fd 1) is now going |
+| `&` | run in the background, give me my prompt back |
+
+It genuinely works. It also means: no log rotation (`app.log` grows until the disk is
 full), no restart on crash, no restart on reboot, and no way to find the process later
-except `ps aux | grep`. You will eventually run this command twice and have two copies of
-your app fighting over a port.
+except `ps aux | grep`.
+
+And you will run it twice.
+
+### The PID story, which is worth the detour
+
+The obvious next step is to save the PID so you can stop it later:
+
+```bash
+nohup bun run server.js > app.log 2>&1 & echo $! > app.pid
+```
+
+`$!` is "the PID of the last background job". On my earlier server this produced a PID
+that did not match what `ps` showed, and I lost an evening to it. The explanation I was
+given, confidently, was that `nohup` forks a child, so `$!` captures the wrapper rather
+than the real process.
+
+That is wrong, and you can check it in ten seconds:
+
+```
+$ nohup sleep 40 >/dev/null 2>&1 &
+$ echo $!
+487308
+$ ps -o pid=,comm= -p 487308
+ 487308 sleep
+```
+
+`$!` **is** the process. `nohup` does not fork. It sets `SIGHUP` to ignore, redirects
+output, and then `execve`s your command, replacing itself in the same process. Same PID
+start to finish. The giveaway in the bad explanation was a process tree where the parent
+had a *higher* PID than its child, which cannot happen.
+
+`setsid` genuinely does fork, and that is a real difference:
+
+```
+$ setsid sleep 41 >/dev/null 2>&1 </dev/null &
+$ echo $!
+487317
+$ ps -o pid=,comm= -p 487317      # empty. already gone.
+$ ps -eo pid=,args= | grep 'sleep 41'
+487319 sleep 41
+```
+
+So one explanation was right and the other was wrong, delivered with identical
+confidence. **Check the claim against your own box.** It is usually one command.
+
+What was actually wrong on my server, visible in the timestamps I had pasted and that
+neither of us read: the PID `ps` was showing had started an hour earlier, on a different
+terminal. It was a leftover from a previous run still holding the port, and the process I
+had just launched had died immediately on `EADDRINUSE`. Two copies of the app, and the
+whole PID discussion was chasing a symptom.
+
+The workaround I shipped was `sleep 1; pgrep -f "my app" > app.pid`, which is worse than
+the bug: `pgrep` finds the *stale* process and writes its PID to the file, so now the PID
+file confidently points at the wrong instance.
+
+The real lesson is not about `nohup`. It is that once you are hand-rolling PID files, you
+have started writing a bad process manager, and there is a good one already installed.
 
 ## Wrong fix two: tmux
 
