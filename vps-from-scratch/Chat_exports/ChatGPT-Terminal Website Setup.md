@@ -516,7 +516,7 @@ dev.raghav56.tech {
     route {
         @protected path /*
         basic_auth @protected {
-            raghav $2a$14$CsKxaNX2.5QMi9.E3zVWX.F93PX6GYHi3shzdbYvOSfwyVwDAM6FO
+            raghav $2a$14$REDACTED-ROTATED-2026-08-04
         }
     }
 
@@ -1466,7 +1466,7 @@ dev.raghav56.tech {
     route {
         @protected path /*
         basic_auth @protected {
-            raghav $2a$14$CsKxaNX2.5QMi9.E3zVWX.F93PX6GYHi3shzdbYvOSfwyVwDAM6FO
+            raghav $2a$14$REDACTED-ROTATED-2026-08-04
         }
     }
 
@@ -1804,7 +1804,7 @@ dev.raghav56.tech {
     route {
         @protected path /*
         basic_auth @protected {
-            raghav $2a$14$CsKxaNX2.5QMi9.E3zVWX.F93PX6GYHi3shzdbYvOSfwyVwDAM6FO
+            raghav $2a$14$REDACTED-ROTATED-2026-08-04
         }
     }
 
@@ -2224,7 +2224,7 @@ Hello there it is Raghav Gupta
 																		"http_basic": {
 																			"accounts": [
 																				{
-																					"password": "$2a$14$CsKxaNX2.5QMi9.E3zVWX.F93PX6GYHi3shzdbYvOSfwyVwDAM6FO",
+																					"password": "$2a$14$REDACTED-ROTATED-2026-08-04",
 																					"username": "raghav"
 																				}
 																			],
@@ -3153,7 +3153,7 @@ dev.raghav56.tech {
     route {
         @protected path /*
 	basic_auth @protected {
-            raghav $2a$14$CsKxaNX2.5QMi9.E3zVWX.F93PX6GYHi3shzdbYvOSfwyVwDAM6FO
+            raghav $2a$14$REDACTED-ROTATED-2026-08-04
 	}
     }
 
