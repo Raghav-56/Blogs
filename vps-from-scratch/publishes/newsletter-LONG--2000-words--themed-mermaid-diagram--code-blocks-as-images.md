@@ -1,86 +1,95 @@
-<!--
-WHAT THIS FILE IS
+# vps from scratch
+
+## WHAT THIS FILE IS
+
 Long-form newsletter post. ~2,000 words of prose. Written for a Canva layout where the
 code blocks are rendered as images.
 
 FOR THE DESIGNER
+
 - 9 code blocks, each marked `<!-- IMAGE n -->` with an italic caption line underneath.
   They are deliberately short so they read as graphics, not walls of text. Longest line
   is 75 characters, so nothing wraps at any sensible width. Use a single monospace font
   and one background colour across all 9 so they read as a set.
+
 - IMAGE 8 (`namei -l`) is the hero. If one code image gets full width, make it that one.
 - IMAGE 1 is two words. Set it big, centred, as the opening visual.
 - One mermaid diagram, marked `<!-- DIAGRAM -->`. It is already themed and coloured, so
-  render it as-is at https://mermaid.live and drop in the PNG/SVG. Full width, it is the
+  render it as-is at <https://mermaid.live> and drop in the PNG/SVG. Full width, it is the
   spine of the piece. Caption underneath.
 - 4 pull quotes marked `<!-- PULL QUOTE -->`. The first and last are the two worth
   setting big.
 - Section headings are the only separators. There are no horizontal rules, on purpose.
 - Links are inline markdown. Keep them live.
 - Delete this comment block before publishing.
--->
 
-**Title:** The backend never became public
+## Article
+
+**Title:** Hosting a web service on a free vps
 
 **Subtitle:** I put my site on a free server. Here is the mental model I was missing, and every error that taught it to me.
 
 Open a terminal, any terminal, and run this:
 
 <!-- IMAGE 1 -->
-```
+```bash
 curl raghav56.tech
 ```
+
 *Caption: try this before you keep reading.*
 
-You get a business card. Coloured, boxed, laid out for a terminal. Open [the same
-URL](https://raghav56.tech) in a browser and you get an ordinary website instead. Same
-address, same server, two completely different things, decided by one header.
+You get a business card. Coloured, boxed, laid out for a terminal. Open [the same URL](https://raghav56.tech) in a browser and you get an ordinary website instead.
+Same address, same server, two completely different things, decided by one header.
 
-That trick is the last 5% of this story. The other 95% was discovering that a server does
-almost nothing you expect, and that every layer between your code and a stranger's browser
-fails silently and separately.
+That trick is the last 5% of this story. The other 95% was getting a free server,
+discovering how exactly does a web request works, all layer
+between your code and a stranger's requester (browser or terminal),
+and every way that can go wrong.
 
-I have done this twice now, on two machines, seven months apart. The second time took an
-afternoon. The first took weeks, and the difference between them is this newsletter.
+I have done this multiple times now, on two machines, seven months apart.
+The first time it took Weeks, there was sooo much that went wrong, and
+the second time was still a whole night, you always learn so much.
+Ill try to explain the difference between them is this newsletter, so you can do it in a few days.
+
+A few things before we start:
+
+I don't have nearly enough space to write about everything, I'll name drop a bunch and leave implicity many things, do:
+
+- The loop of asking llms "how to deep guide with how and why and what else" works,
+- yes these questions are must while following a guide, otherwise believe me second time might still be in weeks
+
+I got helped by a bunch of people throughout, seniors, peers, I am really greatfull.
 
 ## The free machine is real, and it is not a toy
 
-[Oracle Cloud's Always Free tier](https://www.oracle.com/cloud/free/) is not a trial and
-does not expire after twelve months. The ARM allocation is **4 CPUs and 24 GB of RAM**,
-permanently, for nothing. The box everyone recommends for six dollars a month is 1 CPU and
-1 GB.
+[Oracle Cloud's Always Free tier](https://www.oracle.com/cloud/free/) is not a trial and you get it forever.
+The ARM allocation is **2 CPUs and 12 GB of RAM** (used to be double that,
+you are already seriously missing out, don't delay).
 
-Here is mine, right now:
+Github student pack and other trials are temporary and give a fraction of resources of even the current free quota.
+
+Here are resource stats of my machine:
 
 <!-- IMAGE 2 -->
-```
-$ nproc
-4
+![alt text](image.png)
 
-$ free -h
-               total        used        free   available
-Mem:            23Gi       3.1Gi       686Mi        20Gi
+This machine hosts multiple web services, databases, backends of mine and my friends.
 
-$ uptime -p
-up 12 weeks, 6 days
-```
-*Caption: four cores, 23 GB, three months of uptime, zero rupees.*
+Things ai wont tell you:
 
-That machine runs a website, a Postgres database, a log aggregator, a metrics dashboard,
-and two other people's college projects, on 3 GB.
+1. You will see **"Out of capacity for shape VM.Standard.A1.Flex"**, probably several times, you'll have to try several times.
 
-Two things nobody warns you about. **You will see "Out of capacity for shape
-VM.Standard.A1.Flex"**, probably several times. That is a queue, not a rejection. Retry at
-a different hour, pick a less obvious home region at signup (you cannot change it later),
-or create a smaller instance and resize it after, which often works when creating at full
-size does not.
+- Make your oracle account tenancy in some good region (mine is US Ashburn), Hyderabad is filled that was my first attempt
+- if it still doesn't work upgrade to a PAYG account
 
-And **your machine is ARM**. Download `arm64` builds, not `amd64`. An x86 binary gives you
+- Yes you'll need a credit or debit card with international payments and 1SGD for normal account anf 11-12k for PAYG later, will be held and no as long as you're not smart you'll never be charged.
+
+2. **Your machine is ARM**. Download `arm64` builds, not `amd64`. An x86 binary gives you
 `Exec format error` and no other hint.
 
 ## The mental model I was missing
 
-This is the thing I wish someone had drawn for me on day one. Not the tools. The journey.
+I wish I could give my past self this diagram. Not the tools, the journey.
 
 <!-- DIAGRAM -->
 ```mermaid
@@ -145,19 +154,20 @@ flowchart TD
     style GATE fill:#fffbeb,stroke:#f59e0b,stroke-width:1px,color:#78350f
     style BOX  fill:#f8fafc,stroke:#94a3b8,stroke-width:1px,color:#0f172a
 ```
+
 *Caption: three gatekeepers before your code ever runs. Any one can say no, and none of them will tell you.*
 
-Notice where your application actually sits. Bottom of the diagram, on `127.0.0.1`, which
-means it cannot receive traffic from the internet at all. Exactly one process is exposed,
-and it is not yours.
+\* Uses specific things name, for eg there could be systemd or nginx in place of caddy, though above is a good default
 
-<!-- PULL QUOTE -->
+Notice where my applications actually are attached, bottom of the diagram, on `127.0.0.1` i.e. localhost, on processes on the machine can access them.  
+Read about Host = IP:port, difference bw `0.0.0.0` and `localhost`
+
 > Your app is not on the internet. Something in front of it is.
 
-## It runs. You close the laptop. It stops.
+## It runs, you close the laptop, it stops
 
-Your first deploy is you, typing `bun run server.js` into an SSH session. It works. You are
-delighted. Then your wifi drops and the site dies with it, because your program was a child
+Your first deploy is you, typing `bun run server.js` into your own laptop or the SSH session. It works. You are delighted.
+Then you close the session or wifi drops and the site dies with it, because your program was a child
 of your login session and the session ended.
 
 The usual first fixes are `nohup` and `tmux`. Both survive logout. Neither restarts your app
@@ -165,8 +175,9 @@ when it crashes, survives a reboot, or leaves any trace the service exists.
 
 The real answer was already installed.
 [systemd](https://www.freedesktop.org/software/systemd/man/systemd.service.html) started
-every other service on your box and will happily start yours. My first attempt, from that
-earlier server:
+every other service on your box and will happily start yours. 
+
+My first attempt, from that earlier server:
 
 <!-- IMAGE 3 -->
 ```ini
@@ -176,17 +187,19 @@ WorkingDirectory=~/raghav/Agent_kdg
 ExecStart=uv run main.py
 StandardOutput=append:logs/server.log
 ```
+
 *Caption: four separate mistakes in four lines. Can you spot them?*
 
 systemd told me, in language that is genuinely useful once you can read it:
 
 <!-- IMAGE 4 -->
-```
+```text
 Loaded: bad-setting
 Main PID: 3476 (code=exited, status=203/EXEC)
 
 WorkingDirectory= path is not absolute: ~/raghav/Agent_kdg
 ```
+
 *Caption: three error strings worth memorising. You will meet all of them.*
 
 **`path is not absolute: ~/...`** means systemd does not expand `~`. Tilde expansion is a
@@ -205,11 +218,12 @@ A quieter fourth: relative paths in `StandardOutput=append:logs/server.log` reso
 Then the one that catches everybody exactly once. Both commands succeed. Nothing runs:
 
 <!-- IMAGE 5 -->
+```bash
+sudo systemctl start agent
+pgrep -f "uv run main.py"
+# nothing. no error. no output.
 ```
-$ sudo systemctl start agent
-$ pgrep -f "uv run main.py"
-$            # nothing. no error. no output.
-```
+
 *Caption: silence is the worst error message.*
 
 `ExecStart` said `uv`, and systemd has no idea where that is. **systemd does not read your
@@ -229,11 +243,12 @@ public one included.
 Build the habit of reading the address column, never the port:
 
 <!-- IMAGE 6 -->
-```
+```bash
 $ ss -tlnp
 LISTEN  127.0.0.1:2056   bun     ← unreachable from outside
 LISTEN          *:443    caddy   ← the only public door
 ```
+
 *Caption: same machine, same kind of app, completely different exposure.*
 
 In Express, `app.listen(PORT)` with no host binds `0.0.0.0`. Every tutorial writes it that
@@ -289,6 +304,7 @@ proxy_set_header X-Real-IP         $remote_addr;
 proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
 proxy_set_header X-Forwarded-Proto $scheme;
 ```
+
 *Caption: forget the last line and your HTTPS site starts emitting http:// links.*
 
 The Caddy equivalent is the entire file, unedited, from my server:
@@ -296,9 +312,10 @@ The Caddy equivalent is the entire file, unedited, from my server:
 <!-- IMAGE 8 -->
 ```caddyfile
 api.example.com {
-    reverse_proxy localhost:5001
+  reverse_proxy localhost:5001
 }
 ```
+
 *Caption: obtains a certificate, renews it forever, redirects HTTP to HTTPS, sets all four headers, enables HTTP/2 and HTTP/3.*
 
 ## The 403 that redesigned my server
@@ -310,7 +327,7 @@ fine. The file existed and `ls -l` said it was world readable.
 This command solves it, and it is the most useful thing in this newsletter:
 
 <!-- IMAGE 9 -->
-```
+```bash
 $ namei -l /home/ubuntu/raghav/site/static/index.txt
 drwxr-xr-x root   root   /
 drwxr-xr-x root   root   home
@@ -318,6 +335,7 @@ drwxr-x--- ubuntu ubuntu ubuntu
 drwx------ ubuntu ubuntu raghav          ← 700. there it is.
 -rw-rw-r-- ubuntu ubuntu index.txt       ← world readable, and irrelevant
 ```
+
 *Caption: `namei -l` walks every directory in a path. `ls -l` on the file lies to you.*
 
 **Directory permissions compose.** To read a file you need traverse permission on every
@@ -336,7 +354,7 @@ of my `.env`, my SSH keys, and my `.git` directory.
 <!-- PULL QUOTE -->
 > The 403 was not a problem to work around. It was the filesystem telling me my design was wrong.
 
-## Certificates are easy. Renewals are where you fail.
+## Certificates are easy. Renewals are where you fail
 
 [Let's Encrypt](https://letsencrypt.org/) gives you a certificate in one command. Keeping
 one is the hard part, and a certificate that stops renewing takes your site down ninety days
