@@ -2,7 +2,7 @@
 
 ## WHAT THIS FILE IS
 
-Long-form newsletter post. ~2,000 words of prose. Written for a Canva layout where the
+Long-form newsletter post. ~2,500 words of prose. Written for a Canva layout where the
 code blocks are rendered as images.
 
 FOR THE DESIGNER
@@ -569,31 +569,25 @@ Run `sudo certbot renew --dry-run`, which will surface all three at once. Write 
 reload hook. Or, if you do not specifically need a wildcard certificate, use Caddy and skip
 this section of your life entirely.
 
-## Check the advice, including mine
+## Errors Occur, get used to them and debugging
 
-Debugging that first server, I was told confidently that `nohup` forks a child process, and
-that this explained a PID mismatch I was chasing. It is wrong. `nohup` ignores the hangup
-signal, redirects output, then replaces itself with your command in the same process. Same
-PID throughout. Ten seconds with `nohup sleep 40 &` and `ps` proves it.
+AI Helps so much I can not express, But things are imperfect, there are just too many things that can go wrong.
 
-The actual bug was sitting in timestamps I had already pasted: the process I was staring at
-had started an hour earlier on a different terminal. A leftover, still holding the port,
-while the copy I had just launched died on `EADDRINUSE`.
+Here is a list of very frustrating ones I've faced:
 
-And a fresh one, from an hour before publishing this. I backed up my Caddy config as
-`raghav56.tech.caddy.bak` and left it *inside* the `sites-enabled/` folder. That folder is
-imported with a `*` glob, so Caddy loaded the backup as a second site and died on a
-duplicate definition. Nothing broke, because the deploy runs `caddy validate` before `caddy
-reload`, and validate refused.
-
-<!-- PULL QUOTE -->
-> Validate before you reload. It turns a typo into a failed deploy instead of an outage.
+- Typos, you have to type sometimes instead of copy pasting or letting agent run things, get used to it
+- You have to deviate from the guides, here the actual understanding rather than rote loop of sending error directly is required, without the habit of analysing you're NGMI.
+- If a service is running at a port / host, another can't, close things. Also check logs, start times, PIDs before you trust that the process you're looking at is the one you just ran.
+- `nohup` does not just forks a child process, there was a PID mismatch, it just ignores the hangup signal, redirects output, and replaces itself with your command in the same process, same PID throughout.
+- Don't take a confident-sounding explanations on faith, test things yourself.
+- The real bug many times sits in timestamps and logs, AI is ood at reading it, paste it all after you analyse.
+- Back up files, particularly configs, but do it carefully. Keep backups, they help a bunch because both humans and ai forget, just keep out of auto-imported directories.
+- Validate things before you run, bash scripts, caddyfiles, etc etc.
 
 ## Where to start
 
 The order that works: get the machine, get *something* responding on a port, put a proxy in
-front, add the domain, add TLS, then automate the deploy. Each step exists because the
-previous one broke.
+front, add a process manager, add the domain, add TLS, then automate the deploy.
 
 - [Oracle Cloud Always Free](https://www.oracle.com/cloud/free/) for the server
 - [GitHub Student Developer Pack](https://education.github.com/pack) for a free `.tech` domain
@@ -601,8 +595,8 @@ previous one broke.
 - [Tailscale](https://tailscale.com/) so your dashboards live on a private network, not a public subdomain
 - `man ss`, `man namei`, `man systemd.service`. Genuinely.
 
-The full sixteen-part version, with every config and every quirk I collected, is at
-[raghav56.tech/blog](https://raghav56.tech/blog).
+Source:
+[raghav56.tech/blog](https://raghav56.tech/blog/vps-from-scratch).
 
 Process of writing this was-
 
