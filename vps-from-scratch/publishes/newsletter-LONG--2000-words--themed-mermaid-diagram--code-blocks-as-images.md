@@ -49,7 +49,7 @@ and every way that can go wrong.
 I have done this multiple times now, on two machines, seven months apart.
 The first time it took Weeks, there was sooo much that went wrong, and
 the second time was still a whole night, you always learn so much.
-Ill try to explain the difference between them is this newsletter, so you can do it in a few days.
+I'll try to explain the difference between them is this newsletter, so you can do it in a few days.
 
 A few things before we start:
 
@@ -61,7 +61,10 @@ I don't have nearly enough space to write about everything, I'll name drop a bun
 
 I'll focus on listing things that AI failed me with, it's perfectly valid to just give this blog to an AI and ask it to guide along if you want that, me personally prefer reading guides and asking my own questions in multiple chats with forks of forks of forks.
 
-I got helped by a bunch of people throughout, seniors, peers, I am really grateful.
+A bunch of things here are Probably approximately correct (PAC the short form a friend uses), because its based on my experience, though ofc these things worked so keep in mind things have caveats.  
+I'll PAC try to mark the places in this which are particularly so, like this <- PAC
+
+I got helped by a bunch of people throughout, seniors, peers. Unnamed because idk if they are okay to be named, also don't wanna miss anyone, but I am really grateful.
 
 ## The free machine is real, and it is not a toy
 
@@ -127,7 +130,7 @@ ofc these will be refunded and as long as you're smart you'll never be charged.
 For the configs ask some llm, just use the best free quota allows, storage, vcpu, etc whatever, its mostly personal preference thing, I used the max though I got 3 accounts so whatever.
 For OS I used ubuntu minimal of the LTS version at that time.
 
-You will here be, creating via the interface or providing your own, a rsa based ssh keypair. This is the only easy way to log in, so keep it safe.
+You will here be, creating via the interface or providing your own, a rsa based ssh key pair. This is the only easy way to log in, so keep it safe.
 More on this in the next section.
 \* Not ed25519, rsa.
 
@@ -135,14 +138,14 @@ Note the Public IP of the instance, you'll need it for many things including to 
 
 ![alt text](image-4.png)
 
-## SSH
+## Accessing it: SSH and firewalls
 
 Two things that make things soo convenient if person I'm working with knows are git and ssh.
 
 Be careful about whats to be done on your local machine and what the server.  
 By default, for this section of guide, its mostly on your local machine, like things on server also but you'll know what, when you're doing then.
 
-The private key of the pair in previous step was to be saved at: `~/.ssh/`.
+The private key of the pair in previous step is to be saved at: `~/.ssh/`.
 
 The command to ssh into the server is:
 
@@ -164,11 +167,13 @@ Ask an llm how to find it, mp curl something with `-v4` or some system command.
 
 2. The second is the host (your instance) firewall, which is the iptables on the server.
 Allow same IP:port as step 1, ask llm for commands.
-Here guides and llms will push you towards `ufw`, but it is not installed by default on the oracle image, and setting it us is an hassle tbh.
+Here guides and llms will push you towards `ufw`, but it is not installed by default on the oracle image, and setting it us is an hassle tbh <- PAC.
 
 3. Authentication (Do read about Authentication vs Authorization sometime).
-This was already done by creating and saving the key.
+This was already done by creating and saving the key. - PAC -
 You might have to start the daemon or add the key somehow, ask ai on error.
+
+Remembering and understanding these is **very** helpful and satisfying.
 
 ### SSH config
 
@@ -195,11 +200,14 @@ Hostname is interesting, its initially the public IP of the server, but later wh
 
 ## Tailscale and VPN
 
-Tailscale is a decentralised VPN that makes your server and your local machine part of the same private network, so you can access it without exposing them to the public internet.
+Tailscale is a decentralised VPN that makes your server and your local machine part of the same private network, so you can access it without exposing them to the public internet <- PAC.
 
 [set it up](https://tailscale.com/) on both your server and your local machine.
-Basically download and loin with same account and add as a service with systemd, follow the docs or ask ai.
+Basically download and login with same account and add as a service with systemd, follow the docs or ask ai.
 Once set up, you can replace public IP from above step to the tailscale hostname in your ssh config, and ssh into your server without exposing it to the public internet(bypass the need for dealing with the layer 1 defence from above).
+
+You might have to open the port 41641 in the cloud firewall and iptables for tailscale to work,
+if things are not working ask ai how to check and do it.
 
 Theres a lot one can do with tailscale, explore.
 
@@ -271,6 +279,8 @@ flowchart TD
     style BOX  fill:#f8fafc,stroke:#94a3b8,stroke-width:1px,color:#0f172a
 ```
 
+↑ PAC
+
 *Caption: three gatekeepers before your code ever runs. Any one can say no, and none of them will tell you. As you saw above*
 
 \* This uses specific things name, for eg there could be systemd or nginx in place of caddy, though above is a good default
@@ -309,6 +319,8 @@ StandardOutput=append:logs/server.log
 ```
 
 *Caption: four separate mistakes in four lines. Can you spot them?*
+
+PAC ↓ (keeps changing, diff envs, diff versions, etc etc, representational and helpful)
 
 systemd told me, in language that is genuinely useful once you can read it:
 
@@ -351,15 +363,16 @@ pgrep -f "uv run main.py"
 Every tool in your home directory is invisible to all three. Run `which uv`, paste the full
 path.
 
-## Nothing can reach it, caddy
+## Nothing can reach it, caddy 1
 
-Here we'll setup a reverse proxy, which acc to the analogy I used with my friend is like a portal master or gatekeeper+receptionist, we'll come back to this analogy later.
+Here we'll setup a reverse proxy, which acc to the analogy I used with my friend is like a portal master or gatekeeper+receptionist, we'll come back to this analogy in next section.
 
 Before we install anything next is an important concept to understand.
 
 **Layer one is what address your app bound to.** A socket binds to an address *and* a port.  
 `127.0.0.1` or `localhost` means the kernel only delivers packets that came from this same machine. "It is blocked from the internet", only processes on the machine, which obv do not require internet to access it can do so.
 `0.0.0.0` means every interface, public ones, which can somehow know its public ip included.
+↑ PAC
 
 Build the habit of reading the address column, never just the port:
 
@@ -379,44 +392,63 @@ Pass `Bun.serve({ port: PORT, hostname: "127.0.0.1" })` instead.
 Ask an AI how to use localhost for your stack in production, not just dev.
 
 **Layer two is the host firewall.** Same `ufw` stuff from before, we don't have it on our machine, ignore that all.
-Rules are raw iptables with a default DROP policy, saved with `netfilter-persistent`, ask ai how to open.  
-And while you are in there: **never** run `iptables -F` on Oracle Cloud.** The default rules carry cloud metadata, DHCP, NTP, and the iSCSI mount for your boot volume. Flushing them can cost you the root disk.
+Rules are raw iptables with a default DROP policy, saved with `netfilter-persistent`, ask ai how to do it.  
 
-**Layer three is the cloud firewall**, invisible from inside the machine. Oracle's security
-list opens port 22 and nothing else. Everything on the box can be correct and you still get
-nothing, because the packet never arrived.
+PAC ↓
+And while you are in there: **never run `iptables -F` on Oracle Cloud.** The default rules carry cloud metadata, DHCP, NTP, and the iSCSI mount for your boot volume. Flushing them can cost you the root disk.
+\*BTW I did run this lol following an AI guide, and it cost me more than 15 minutes of debugging, that too because i had the record of how my iptables look like in personal documentation.
 
-What identifies the layer in one second is the *shape* of the failure, not the message:
+**Layer three is the cloud firewall**, invisible from inside the machine.  
+In Oracle's security list, mentioned before, only port 22,which is used for ssh is open and nothing else.  
+Make sure to open 80 and 443 for your public IP, respectively for http and https.
+
+\*BTW this firewall only comes into play when using the VCN provided by Oracle, if you're doing anything via tailscale stuff, its bypassed, dw about it.
+
+PAC ↓
+To identifies the layer with problem look at the *shape* of the failure, not the message:
 
 - Hangs, then times out → a firewall dropped it silently. Layer two or three.
 - Instant `connection refused` → it reached your machine, nothing was listening. Layer one.
-- Connects, then nothing → your app is broken. Never a network problem.
+- Connects, then nothing → your app is broken.
 
-One correction to myself. Before you have a proxy, `0.0.0.0` is the *correct* answer and
-`127.0.0.1` will drive you mad, because nothing outside can reach it, including you. Once a
-proxy exists, everything moves back to loopback. Same question, opposite right answers, so
-check which world a tutorial was written for.
+Now install the proxy you want to nginx, caddy, apache, whatever this part is hard to get wrong so set it up also.
 
-## The receptionist
+Also Before you have a proxy, `0.0.0.0` is the *correct* answer and
+`127.0.0.1` will drive you mad, because nothing outside can reach it, including you.  
+Once a proxy exists, everything moves back to loopback, thats because its that proxy running at `0.0.0.0` and it is the one that is reachable from outside, something has to be yk.
 
-Eventually a friend wants to host their project on your box too, and there is exactly one
-port 443.
+## The Portal master, caddy 2
 
-The way I ended up explaining this out loud to a batchmate is the version that finally
-stuck for both of us. **The proxy is a receptionist.** The public IP is the building
-entrance, the receptionist sits at the front desk, your backends are departments upstairs.
-Nobody walks in off the street and straight into a department.
+Or as AI asked me to call it the reception.
 
-Which answers what confused me for months: if my backend is on `127.0.0.1`, how is anybody
+Eventually you want to host another project or a friend wants to host their project on your box too, and there is exactly one port set 80 and 443, thats where reverse proxy comes in.
+
+Actuallly for me, His service came before mine XD, I was not a web-dev guy and then one day wanted to host my own project, so I had to learn this part.  
+BTW I wager if you're a UIET junior, a bunch of you would have had hit my server, because of that friends service, delayed Hello!
+
+This is the way I ended up explaining this out loud, recording in a tts chatgpt session.
+The chat also went in while creating this blog.
+**The proxy is the reception of your server for web requests.** The public IP is the building
+address, your backends are departments upstairs, the receptionist tells a request to go to which.
+Also nobody walks in off the street and straight into a department from reception, we have security also.
+
+↑ PAC, some don't have it set u well enough for the analogy to hold,
+
+- There might be just a gate no walls, anyone can side step and walk in, the localhost vs `0.0.0.0` thing.
+- No authentication there, receptionist can only tell which dep to go, not block anyone. The lock is at the department level or not even there.
+- etc.
+
+Now we know what confused someone a bunch: if backend is on `127.0.0.1`, how is anybody
 on the internet using it? They are not. They are talking to the receptionist.
 
 <!-- PULL QUOTE -->
 > The backend never became public. That was the whole point.
 
-I started on [nginx](https://nginx.org/en/docs/) and moved to
+I started on Systemd then moved to [nginx](https://nginx.org/en/docs/) and then rn am using
 [Caddy](https://caddyserver.com/docs/). Learn nginx anyway, it is on every server you will
-ever inherit. But know the trade. In nginx these four lines are mandatory and nothing warns
-you:
+ever inherit, I moved on recommendation of a senior and because felt the tradeoff worth it.
+
+In nginx these four lines are mandatory and nothing warns you:
 
 <!-- IMAGE 7 -->
 ```nginx
@@ -428,6 +460,8 @@ proxy_set_header X-Forwarded-Proto $scheme;
 
 *Caption: forget the last line and your HTTPS site starts emitting http:// links.*
 
+Also also, we have not even talked about DNS and HTTPS (the tls/ssl thing) above thats way hard with nginx. <- PAC
+
 The Caddy equivalent is the entire file, unedited, from my server:
 
 <!-- IMAGE 8 -->
@@ -438,6 +472,8 @@ api.example.com {
 ```
 
 *Caption: obtains a certificate, renews it forever, redirects HTTP to HTTPS, sets all four headers, enables HTTP/2 and HTTP/3.*
+
+DNS and HTTPS maybe in some other blog, maybe read and explore yourself till then. They're so cool! or as someone told me, I try yo see the coolness in all these technologies, it helps.
 
 ## The 403 that redesigned my server
 
@@ -528,3 +564,14 @@ previous one broke.
 
 The full sixteen-part version, with every config and every quirk I collected, is at
 [raghav56.tech/blog](https://raghav56.tech/blog).
+
+Process of writing this was-
+
+- Used a agent with access to my server and relevant places to describe my setup in detail as a md file
+- Exported some of the significant chats of mine with AI (ones i could find), used a browser extension.
+- Asked fable to structure it, get a scaffolding and filers.
+- Manually section by section I wrote this myself then, this has a bunchh of personal experiences,
+- I really hope someone is helped.
+- There should be no em dashes
+- the mermaid diag is by AI, as are most all in all my projects, a lil edit my me.
+- symbols not on keyboard from the site: <https://wumbo.net/symbols>
