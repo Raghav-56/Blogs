@@ -473,15 +473,41 @@ api.example.com {
 
 *Caption: obtains a certificate, renews it forever, redirects HTTP to HTTPS, sets all four headers, enables HTTP/2 and HTTP/3.*
 
-DNS and HTTPS maybe in some other blog, maybe read and explore yourself till then. They're so cool! or as someone told me, I try yo see the coolness in all these technologies, it helps.
+DNS and HTTPS will be stubs here, in detail maybe in some other blog, maybe read and explore yourself till then. They're so cool! or as someone told me, I try to see the coolness in all these technologies, it helps.
 
-## The 403 that redesigned my server
+## Process Management
+
+There are many types of services, in here it gets very "depends" on what you're doing,
+I've personally done 4 kinds:
+
+- Web frontend managed by some service
+- Web backend managed by some service (bun or node something)
+- Static files, terminal or simple HTML CSS <- PAC
+- Docker services
+
+There are so many caveats and things idk that super PAC.
+
+I'll give info on two things.
+
+### Services: what I've been implicitly assuming you're working with till now
+
+Design a good caddyfile (or equivalent), take help of documentation and AI.
+
+You can use things like PM2 or OxManager or some load balancer, or whatever.
+Just know this exists and look at the info if you encounter the need.
+
+Yeah so just ignore the next sub-section on static, done.
+
+### Static: The 403 that redesigned my server
+
+This has mostly to do with me learning and the curling my website in bash thing I mentioned at the start.
+If you did not, and are reading this section, DO TRY, it is so cool!
 
 My first attempt at serving files pointed the web server straight at my project folder.
-Every request returned `403` with a `content-length` of zero. No message. TLS fine. Routing
+Every request returned `403` with a `content-length` of zero. No message. DNS fine. TLS fine. Routing
 fine. The file existed and `ls -l` said it was world readable.
 
-This command solves it, and it is the most useful thing in this newsletter:
+This command solves it finally:
 
 <!-- IMAGE 9 -->
 ```bash
@@ -496,37 +522,50 @@ drwx------ ubuntu ubuntu raghav          ← 700. there it is.
 *Caption: `namei -l` walks every directory in a path. `ls -l` on the file lies to you.*
 
 **Directory permissions compose.** To read a file you need traverse permission on every
-directory above it. Mine being readable meant nothing, because a folder two levels up was
+directory above it. Project being readable meant nothing, because a folder two levels up was
 `700`.
 
 The obvious fix is `chmod 755` on your home directory. Do not. That makes every project,
 key, and dotfile you own readable by every other account on the machine, to fix one file.
 
-I refused, and that refusal is where my architecture came from. The source tree stays `700`
-and the web server genuinely *cannot* read it. The build compiles into a separate folder
-and copies the output to `/var/www`, which holds nothing but HTML, CSS and images. If a
+The source tree should stay `700` and the web server genuinely *cannot* and *should not* read it.  
+Have the build compile into a separate folder, copies the output to `/var/www`, which holds nothing but HTML, CSS and images. If a
 file server ever has a path traversal bug, it leaks pages that were already public instead
 of my `.env`, my SSH keys, and my `.git` directory.
 
 <!-- PULL QUOTE -->
 > The 403 was not a problem to work around. It was the filesystem telling me my design was wrong.
 
-## Certificates are easy. Renewals are where you fail
+I have a pretty weird setup with other users on my server, which I'll not go into,  
+just know knowing about file permissions is a good idea, theres something called ACL also.
 
-[Let's Encrypt](https://letsencrypt.org/) gives you a certificate in one command. Keeping
-one is the hard part, and a certificate that stops renewing takes your site down ninety days
+## DNS
+
+Get a [GitHub student pack](https://education.github.com/pack), they give free domain names ^-^,
+Set things up, ask AI to explain, there's a lot to learn there.
+
+They give a bunch of other stuff also, explore, used to even more ;-;
+
+## HTTPS: Certificates are easy. Renewals are where you fail
+
+First thing first, HTTPS and SSL certificates are free, I've seen people doing pretty weird stuff there, like paying or fee trials with anonymous emails, beware.
+
+With Caddy no such below thing is required, it manages the certificates for services using the below mentioned service automatically.
+
+[Let's Encrypt](https://letsencrypt.org/) via `certbot` gives you a certificate in one command.  
+Keeping one is the hard part, and a certificate that stops renewing takes your site down ninety days
 after you last thought about it.
 
-On my box, as I write this, **both certificates have broken renewal**, for two different
-reasons. One uses a *manual* authenticator, so renewal stops and waits for a human to add a
-DNS record. At 3am, nobody answers. The other renews through the nginx plugin, and I moved
-to Caddy months ago. **Renewal configs do not follow you when you change web servers.**
+PAC, Caveat:
+On my box, as I write this, **2 certificates have broken renewal**, for two different
+reasons something backward compatibility and sub-domains and very specific stuff, though I've made it work via "jugaad" and why fix something not broken.
+Do it cleanly when you do.
 
 A third trap waits even when renewal works: the hooks directory is empty by default, so
 nothing reloads your web server afterwards. The certificate on disk is fresh, the one being
 served is expired, and every check against the file says everything is fine.
 
-So: run `sudo certbot renew --dry-run` today, which surfaces all three at once. Write the
+Run `sudo certbot renew --dry-run`, which will surface all three at once. Write the
 reload hook. Or, if you do not specifically need a wildcard certificate, use Caddy and skip
 this section of your life entirely.
 
