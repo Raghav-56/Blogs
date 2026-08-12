@@ -23,7 +23,7 @@ FOR THE DESIGNER
 - Links are inline markdown. Keep them live.
 - Delete this comment block before publishing.
 
-## Article
+# Article
 
 **Title:** Hosting a web service on a free vps
 
@@ -89,9 +89,13 @@ Make sure to set up 2FA and then passkey for the account, it helps a lot.
 
 #### VCN
 
-Go here for allotting an VCN (Virtual Cloud Network).
+This step can technically be skipped, VCN can implicitly be created during the creation of Instance.
+
+Go here for allotting an VCN (Virtual Cloud Network):
 
 ![alt text](image-2.png)
+
+This is what connects your Instance to the Internet, connections to and from go through.
 
 Also this is where you'll be managing the subnet, and the security list.
 
@@ -119,6 +123,85 @@ ofc these will be refunded and as long as you're smart you'll never be charged.
 
 2. **Your machine is ARM**. Download `arm64` builds, not `amd64`. An x86 binary gives you
 `Exec format error` and no other hint.
+
+For the configs ask some llm, just use the best free quota allows, storage, vcpu, etc whatever, its mostly personal preference thing, I used the max though I got 3 accounts so whatever.
+For OS I used ubuntu minimal of the LTS version at that time.
+
+You will here be, creating via the interface or providing your own, a rsa based ssh keypair. This is the only easy way to log in, so keep it safe.
+More on this in the next section.
+\* Not ed25519, rsa.
+
+Note the Public IP of the instance, you'll need it for many things including to ssh into the server.
+
+![alt text](image-4.png)
+
+## SSH
+
+Two things that make things soo convenient if person I'm working with knows are git and ssh.
+
+Be careful about whats to be done on your local machine and what the server.  
+By default, for this section of guide, its mostly on your local machine, like things on server also but you'll know what, when you're doing then.
+
+The private key of the pair in previous step was to be saved at: `~/.ssh/`.
+
+The command to ssh into the server is:
+
+```bash
+ssh username@server_public_ip
+
+# eg for me
+ssh ubuntu@150.xx.xx.xx
+# with tailscale
+ssh ubuntu@oracle
+# with ssh config
+ssh oracler
+```
+
+It won't work as it is, you'll have to allow your machine to reach and access the server in 3 layers.
+
+1. The first is cloud firewall, which is the security list in VCN from before, it has to allow port 22 for your machines public IP.
+Ask an llm how to find it, mp curl something with `-v4` or some system command.
+
+2. The second is the host (your instance) firewall, which is the iptables on the server.
+Allow same IP:port as step 1, ask llm for commands.
+Here guides and llms will push you towards `ufw`, but it is not installed by default on the oracle image, and setting it us is an hassle tbh.
+
+3. Authentication (Do read about Authentication vs Authorization sometime).
+This was already done by creating and saving the key.
+You might have to start the daemon or add the key somehow, ask ai on error.
+
+### SSH config
+
+Now lets make it easier, it is the ssh daemon which manage the above connection, they read a config file,  
+`~/.ssh/config`, if not already made, create it.  
+Now configure it, ask some llm what exactly.
+
+Here's an scaffolding from my setup,
+
+```text
+Host oracler
+    User ubuntu
+    HostName [oracle/Public_IP]
+    IdentityFile ~/.ssh/ssh-key-[exact path].key
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    TCPKeepAlive yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 10
+```
+
+Ask what each thing means to a llm.  
+Hostname is interesting, its initially the public IP of the server, but later when we use tailscale, it will be the tailscale hostname, the one alloted by MagicDNS feature, remember to enable (if its not) during next step.
+
+## Tailscale and VPN
+
+Tailscale is a decentralised VPN that makes your server and your local machine part of the same private network, so you can access it without exposing them to the public internet.
+
+[set it up](https://tailscale.com/) on both your server and your local machine.
+Basically download and loin with same account and add as a service with systemd, follow the docs or ask ai.
+Once set up, you can replace public IP from above step to the tailscale hostname in your ssh config, and ssh into your server without exposing it to the public internet(bypass the need for dealing with the layer 1 defence from above).
+
+Theres a lot one can do with tailscale, explore.
 
 ## The mental model I was missing
 
@@ -188,9 +271,9 @@ flowchart TD
     style BOX  fill:#f8fafc,stroke:#94a3b8,stroke-width:1px,color:#0f172a
 ```
 
-*Caption: three gatekeepers before your code ever runs. Any one can say no, and none of them will tell you.*
+*Caption: three gatekeepers before your code ever runs. Any one can say no, and none of them will tell you. As you saw above*
 
-\* Uses specific things name, for eg there could be systemd or nginx in place of caddy, though above is a good default
+\* This uses specific things name, for eg there could be systemd or nginx in place of caddy, though above is a good default
 
 Notice where my applications actually are attached, bottom of the diagram, on `127.0.0.1` i.e. localhost, only processes on the machine can access them.  
 Read about Host = IP:port, difference bw `0.0.0.0` and `localhost`
@@ -199,8 +282,8 @@ Read about Host = IP:port, difference bw `0.0.0.0` and `localhost`
 
 ## It runs, you close the laptop, it stops
 
-Your first deploy is making things work locally, on your own laptop or the SSH session.
-then comes persistence, when you close the session or wifi drops, the site dies with it, because your program was a child of your login session and the session ended.
+Your first task while deploying is making things work locally, on your own laptop or the SSH session.
+Then comes persistence, when you close the session or wifi drops, the site dies with it, because your program was a child of your login session and the session ended.
 
 The usual first fixes are `nohup` and `tmux`. Both survive logout. Neither restarts your app
 when it crashes, survives a reboot, or leaves any trace the service exists.
@@ -211,7 +294,10 @@ It started every other service on your box and will happily start yours, spend s
 
 Every other program you can use for this purpose is an abstraction over it, pm2, docker, etc.
 
-My very first attempt, from that earlier server:
+Learn things like `systemctl status agent`, `journalctl -u agent`, `systemctl enable agent`, `systemctl restart agent`, etc.
+They help a bunch in debugging and managing your service, while doing other tasks also.
+
+My very first attempt, from that earlier server, for representational purposes, mine was better ofc:
 
 <!-- IMAGE 3 -->
 ```ini
@@ -258,23 +344,24 @@ pgrep -f "uv run main.py"
 # nothing. no error. no output.
 ```
 
-*Caption: although philosophy of posix is no message on succeed, silence is the worst error message.*
+*Caption: because philosophy of posix is no message on succeed, silence is the worst error message.*
 
 `ExecStart` said `uv`, and systemd has no idea where that is. **systemd does not read your
 `.bashrc`.** Neither does cron, nor `ssh host "command"`, which is how your CI will deploy.
 Every tool in your home directory is invisible to all three. Run `which uv`, paste the full
-path, and it will run for months untouched. Mine did.
+path.
 
-## Nothing can reach it
+## Nothing can reach it, caddy
 
-The failure that wastes days, and the diagram above is the whole answer.
+Here we'll setup a reverse proxy, which acc to the analogy I used with my friend is like a portal master or gatekeeper+receptionist, we'll come back to this analogy later.
 
-**Layer one is what address your app bound to.** A socket binds to an address *and* a port.
-`127.0.0.1` means the kernel only delivers packets that came from this same machine. Not
-"is blocked from the internet". Cannot receive from it. `0.0.0.0` means every interface,
-public one included.
+Before we install anything next is an important concept to understand.
 
-Build the habit of reading the address column, never the port:
+**Layer one is what address your app bound to.** A socket binds to an address *and* a port.  
+`127.0.0.1` or `localhost` means the kernel only delivers packets that came from this same machine. "It is blocked from the internet", only processes on the machine, which obv do not require internet to access it can do so.
+`0.0.0.0` means every interface, public ones, which can somehow know its public ip included.
+
+Build the habit of reading the address column, never just the port:
 
 <!-- IMAGE 6 -->
 ```bash
@@ -285,15 +372,15 @@ LISTEN          *:443    caddy   ← the only public door
 
 *Caption: same machine, same kind of app, completely different exposure.*
 
-In Express, `app.listen(PORT)` with no host binds `0.0.0.0`. Every tutorial writes it that
-way, and it is the most common accidental exposure in student projects. Pass
-`app.listen(PORT, "127.0.0.1")`.
+Since most examples only show `port`, people make very suboptimal choices even when they have a reverse proxy.
+It's such a waste to have a portal master when labeled portals exist and anyone can walk in (okay there are locks, but yk can be cracked).  
+For eg in Bun, `Bun.serve({ port: PORT })` with no hostname binds `0.0.0.0`.  
+Pass `Bun.serve({ port: PORT, hostname: "127.0.0.1" })` instead.  
+Ask an AI how to use localhost for your stack in production, not just dev.
 
-**Layer two is the host firewall.** Every guide says `sudo ufw allow 80`. On the Oracle
-image `ufw` is not installed and that command does not exist. Rules are raw iptables with a
-default DROP policy, saved with `netfilter-persistent`. And while you are in there: **never
-run `iptables -F` on Oracle Cloud.** The default rules carry cloud metadata, DHCP, NTP, and
-the iSCSI mount for your boot volume. Flushing them can cost you the root disk.
+**Layer two is the host firewall.** Same `ufw` stuff from before, we don't have it on our machine, ignore that all.
+Rules are raw iptables with a default DROP policy, saved with `netfilter-persistent`, ask ai how to open.  
+And while you are in there: **never** run `iptables -F` on Oracle Cloud.** The default rules carry cloud metadata, DHCP, NTP, and the iSCSI mount for your boot volume. Flushing them can cost you the root disk.
 
 **Layer three is the cloud firewall**, invisible from inside the machine. Oracle's security
 list opens port 22 and nothing else. Everything on the box can be correct and you still get
