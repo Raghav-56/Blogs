@@ -53,10 +53,13 @@ Ill try to explain the difference between them is this newsletter, so you can do
 
 A few things before we start:
 
-I don't have nearly enough space to write about everything, I'll name drop a bunch and leave implicitly many things, do:
+I don't have nearly enough space to write about everything, I'll name drop a bunch and implicitly  leave many things to be done via:
 
-- The loop of asking llms "how to deep guide with how and why and what else" works,
-- yes these questions are must while following a guide, otherwise believe me second time might still be in weeks
+- The loop of asking LLMS "how to deep guide with how and why and what else",
+- It works yes, and these questions are must while following a guide,
+- Also the how, why are important, otherwise believe me second time might still be in weeks
+
+I'll focus on listing things that AI failed me with, it's perfectly valid to just give this blog to an AI and ask it to guide along if you want that, me personally prefer reading guides and asking my own questions in multiple chats with forks of forks of forks.
 
 I got helped by a bunch of people throughout, seniors, peers, I am really grateful.
 
@@ -68,28 +71,58 @@ you are already seriously missing out, don't delay).
 
 Github student pack and other trials are temporary and give a fraction of resources of even the current free quota.
 
-Here are resource stats of my machine:
+Here is an image of me ssh-ing into and resource stats of my machine:
 
 <!-- IMAGE 2 -->
 ![alt text](image.png)
 
 This machine hosts multiple web services, databases, backends of mine and my friends.
 
-Things ai wont tell you:
+Yes you'll need a credit or debit card with international payments and  
+1 SGD for normal account here.
 
-1. You will see **"Out of capacity for shape VM.Standard.A1.Flex"**, probably several times, you'll have to try several times.
+Make your oracle account tenancy in some good region (mine is US Ashburn), Hyderabad is filled that was my first attempt. This will help in next step.
 
-- Make your oracle account tenancy in some good region (mine is US Ashburn), Hyderabad is filled that was my first attempt.
-- if it still doesn't work upgrade to a PAYG (Pay as you go) account.
+Make sure to set up 2FA and then passkey for the account, it helps a lot.
 
-Yes you'll need a credit or debit card with international payments and 1 SGD for normal account and 11-12k Rs for PAYG later, yes these will be held and refunded, no as long as you're smart you'll never be charged.
-*
-1. **Your machine is ARM**. Download `arm64` builds, not `amd64`. An x86 binary gives you
+### The Instance and VCN
+
+#### VCN
+
+Go here for allotting an VCN (Virtual Cloud Network).
+
+![alt text](image-2.png)
+
+Also this is where you'll be managing the subnet, and the security list.
+
+Here's the security list:
+
+![alt text](image-3.png)
+
+Use the Security rules in "Default Security List for [server name]"
+
+This is the foundation you'll need for initial setup, later if you the `tailscale` thing properly, you def wont be dealing with this day-to-day.
+
+#### Instance
+
+Go here for allotting an instance
+
+![alt text](image-1.png)
+
+1. You will see **"Out of capacity for shape VM.Standard.A1.Flex"**, you'll have to probably try several times.
+
+- Remember the tenancy from previous step.
+- If it still doesn't work upgrade to a PAYG (Pay as you go) account.
+
+It'll require holding 11-12k Rs for PAYG upgrade, it has been seriously worth it for me,  
+ofc these will be refunded and as long as you're smart you'll never be charged.
+
+2. **Your machine is ARM**. Download `arm64` builds, not `amd64`. An x86 binary gives you
 `Exec format error` and no other hint.
 
 ## The mental model I was missing
 
-I wish I could give my past self this diagram. Not the tools, the journey.
+I wish I could give my past self this diagram.
 
 <!-- DIAGRAM -->
 ```mermaid
@@ -408,6 +441,3 @@ previous one broke.
 
 The full sixteen-part version, with every config and every quirk I collected, is at
 [raghav56.tech/blog](https://raghav56.tech/blog).
-
-If you take one thing from this: your app is not on the internet. Something in front of it
-is. Once that clicks, the rest is just layers.
