@@ -53,12 +53,12 @@ Ill try to explain the difference between them is this newsletter, so you can do
 
 A few things before we start:
 
-I don't have nearly enough space to write about everything, I'll name drop a bunch and leave implicity many things, do:
+I don't have nearly enough space to write about everything, I'll name drop a bunch and leave implicitly many things, do:
 
 - The loop of asking llms "how to deep guide with how and why and what else" works,
 - yes these questions are must while following a guide, otherwise believe me second time might still be in weeks
 
-I got helped by a bunch of people throughout, seniors, peers, I am really greatfull.
+I got helped by a bunch of people throughout, seniors, peers, I am really grateful.
 
 ## The free machine is real, and it is not a toy
 
@@ -79,12 +79,12 @@ Things ai wont tell you:
 
 1. You will see **"Out of capacity for shape VM.Standard.A1.Flex"**, probably several times, you'll have to try several times.
 
-- Make your oracle account tenancy in some good region (mine is US Ashburn), Hyderabad is filled that was my first attempt
-- if it still doesn't work upgrade to a PAYG account
+- Make your oracle account tenancy in some good region (mine is US Ashburn), Hyderabad is filled that was my first attempt.
+- if it still doesn't work upgrade to a PAYG (Pay as you go) account.
 
-- Yes you'll need a credit or debit card with international payments and 1SGD for normal account anf 11-12k for PAYG later, will be held and no as long as you're not smart you'll never be charged.
-
-2. **Your machine is ARM**. Download `arm64` builds, not `amd64`. An x86 binary gives you
+Yes you'll need a credit or debit card with international payments and 1 SGD for normal account and 11-12k Rs for PAYG later, yes these will be held and refunded, no as long as you're smart you'll never be charged.
+*
+1. **Your machine is ARM**. Download `arm64` builds, not `amd64`. An x86 binary gives you
 `Exec format error` and no other hint.
 
 ## The mental model I was missing
@@ -159,25 +159,26 @@ flowchart TD
 
 \* Uses specific things name, for eg there could be systemd or nginx in place of caddy, though above is a good default
 
-Notice where my applications actually are attached, bottom of the diagram, on `127.0.0.1` i.e. localhost, on processes on the machine can access them.  
+Notice where my applications actually are attached, bottom of the diagram, on `127.0.0.1` i.e. localhost, only processes on the machine can access them.  
 Read about Host = IP:port, difference bw `0.0.0.0` and `localhost`
 
 > Your app is not on the internet. Something in front of it is.
 
 ## It runs, you close the laptop, it stops
 
-Your first deploy is you, typing `bun run server.js` into your own laptop or the SSH session. It works. You are delighted.
-Then you close the session or wifi drops and the site dies with it, because your program was a child
-of your login session and the session ended.
+Your first deploy is making things work locally, on your own laptop or the SSH session.
+then comes persistence, when you close the session or wifi drops, the site dies with it, because your program was a child of your login session and the session ended.
 
 The usual first fixes are `nohup` and `tmux`. Both survive logout. Neither restarts your app
 when it crashes, survives a reboot, or leaves any trace the service exists.
 
-The real answer was already installed.
-[systemd](https://www.freedesktop.org/software/systemd/man/systemd.service.html) started
-every other service on your box and will happily start yours. 
+The real answer is a system utility: [systemd](https://www.freedesktop.org/software/systemd/man/systemd.service.html).
+It started every other service on your box and will happily start yours, spend some time getting familiar with this.
+\* ofc there are abstractions over abstraction in our field, ik about  `runc`
 
-My first attempt, from that earlier server:
+Every other program you can use for this purpose is an abstraction over it, pm2, docker, etc.
+
+My very first attempt, from that earlier server:
 
 <!-- IMAGE 3 -->
 ```ini
@@ -224,7 +225,7 @@ pgrep -f "uv run main.py"
 # nothing. no error. no output.
 ```
 
-*Caption: silence is the worst error message.*
+*Caption: although philosophy of posix is no message on succeed, silence is the worst error message.*
 
 `ExecStart` said `uv`, and systemd has no idea where that is. **systemd does not read your
 `.bashrc`.** Neither does cron, nor `ssh host "command"`, which is how your CI will deploy.
