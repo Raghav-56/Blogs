@@ -38,17 +38,22 @@ curl raghav56.tech
 
 *Caption: try this before you keep reading.*
 
-You get a business card. Coloured, boxed, laid out for a terminal. Open [the same URL](https://raghav56.tech) in a browser and you get an ordinary website instead.
+You get a business card. Coloured, boxed, laid out for a terminal.  
+Open [the same URL](https://raghav56.tech) in a browser and you get an ordinary website instead.
 Same address, same server, two completely different things, decided by one header.
+
+![Terminal card vs Browser website](image-5.png)
+
+*Caption: (same URL and server, two completely different outputs decided by the User-Agent header)*
 
 That trick is the last 5% of this story. The other 95% was getting a free server,
 discovering how exactly does a web request works, all layer
 between your code and a stranger's requester (browser or terminal),
 and every way that can go wrong.
 
-I have done this multiple times now, on two machines, seven months apart.
+I have done this multiple times now, on two machines, seven months apart.  
 The first time it took Weeks, there was sooo much that went wrong, and
-the second time was still a whole night, you always learn so much.
+the second time was still a whole night, you always learn so much.  
 I'll try to explain the difference between them is this newsletter, so you can do it in a few days.
 
 A few things before we start:
@@ -61,16 +66,22 @@ I don't have nearly enough space to write about everything, I'll name drop a bun
 
 I'll focus on listing things that AI failed me with, it's perfectly valid to just give this blog to an AI and ask it to guide along if you want that, me personally prefer reading guides and asking my own questions in multiple chats with forks of forks of forks.
 
-A bunch of things here are Probably approximately correct (PAC the short form a friend uses), because its based on my experience, though ofc these things worked so keep in mind things have caveats.  
+A bunch of things here are Probably approximately correct (PAC, the short form a friend uses), because its based on my experience, though ofc these things worked so keep in mind things have caveats.  
 I'll PAC try to mark the places in this which are particularly so, like this <- PAC
 
 I got helped by a bunch of people throughout, seniors, peers. Unnamed because idk if they are okay to be named, also don't wanna miss anyone, but I am really grateful.
 
 ## The free machine is real, and it is not a toy
 
-[Oracle Cloud's Always Free tier](https://www.oracle.com/cloud/free/) is not a trial and you get it forever.
-The ARM allocation is **2 CPUs and 12 GB of RAM** (used to be double that,
-you are already seriously missing out, don't delay).
+[Oracle Cloud's Always Free tier](https://www.oracle.com/cloud/free/) is not a trial and you get it forever.  
+The ARM allocation is **2 CPUs and 12 GB of RAM** (used to be double that, you are already seriously missing out, don't delay).
+
+| Standard $6/mo VPS | Oracle Always Free Tier |
+| :--- | :--- |
+| • 1 vCPU (Shared) | • 2 to 4 vCPUs (ARM) |
+| • 1 GB RAM | • 12 to 24 GB RAM |
+| • 25 GB SSD | • 50 to 200 GB Storage |
+| • Recurring bill | • $0.00 / forever |
 
 Github student pack and other trials are temporary and give a fraction of resources of even the current free quota.
 
@@ -79,7 +90,7 @@ Here is an image of me ssh-ing into and resource stats of my machine:
 <!-- IMAGE 2 -->
 ![alt text](image.png)
 
-This machine hosts multiple web services, databases, backends of mine and my friends.
+_This machine hosts multiple web services, databases, backends of mine and my friends._
 
 Yes you'll need a credit or debit card with international payments and  
 1 SGD for normal account here.
@@ -127,14 +138,15 @@ ofc these will be refunded and as long as you're smart you'll never be charged.
 2. **Your machine is ARM**. Download `arm64` builds, not `amd64`. An x86 binary gives you
 `Exec format error` and no other hint.
 
-For the configs ask some llm, just use the best free quota allows, storage, vcpu, etc whatever, its mostly personal preference thing, I used the max though I got 3 accounts so whatever.
+For the configs ask some llm, just use the best free quota allows, storage, vcpu, etc whatever, its mostly personal preference thing, I used the max though I got 3 accounts so whatever.  
 For OS I used ubuntu minimal of the LTS version at that time.
 
 You will here be, creating via the interface or providing your own, a rsa based ssh key pair. This is the only easy way to log in, so keep it safe.
 More on this in the next section.
-\* Not ed25519, rsa.
 
-Note the Public IP of the instance, you'll need it for many things including to ssh into the server.
+_\* Not ED25519, RSA._
+
+Note the **Public IP** of the instance, you'll need it for many things including to ssh into the server.
 
 ![alt text](image-4.png)
 
@@ -162,28 +174,72 @@ ssh oracler
 
 It won't work as it is, you'll have to allow your machine to reach and access the server in 3 layers.
 
-1. The first is cloud firewall, which is the security list in VCN from before, it has to allow port 22 for your machines public IP.
+1. The first is cloud firewall, which is the security list in VCN from before, it has to allow port 22 for your machines public IP.  
 Ask an llm how to find it, mp curl something with `-v4` or some system command.
 
 2. The second is the host (your instance) firewall, which is the iptables on the server.
-Allow same IP:port as step 1, ask llm for commands.
+Allow same IP:port as step 1, ask llm for commands.  
 Here guides and llms will push you towards `ufw`, but it is not installed by default on the oracle image, and setting it us is an hassle tbh <- PAC.
 
-3. Authentication (Do read about Authentication vs Authorization sometime).
-This was already done by creating and saving the key. - PAC -
+3. Authentication (Do read about Authentication vs Authorization sometime).  
+This was already done by creating and saving the key. - PAC -  
 You might have to start the daemon or add the key somehow, ask ai on error.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "ui-monospace, SFMono-Regular, Menlo, monospace",
+    "fontSize": "13px",
+    "lineColor": "#64748b",
+    "primaryTextColor": "#0f172a"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 35, "rankSpacing": 40 }
+}}%%
+flowchart LR
+    subgraph LOCAL ["💻 Local Machine"]
+        A["ssh oracler"] --> B["~/.ssh/config<br/>(reads key, host, user)"]
+    end
+
+    subgraph CLOUD ["☁️ Cloud Edge"]
+        C{"OCI VCN Firewall<br/>port 22 open?"}
+    end
+
+    subgraph HOST ["🖥️ VPS Host"]
+        D{"iptables<br/>port 22 allowed?"}
+        E["sshd daemon<br/>matches authorized_keys"]
+    end
+
+    B --> C
+    C -->|"yes"| D
+    C -.->|"no"| Drop1(["⏳ timeout"])
+    D -->|"yes"| E
+    D -.->|"no"| Drop2(["⏳ timeout"])
+    E -->|"match"| F(["🐚 shell prompt"])
+    E -.->|"mismatch"| Deny(["🚫 permission denied"])
+
+    classDef ok fill:#dcfce7,stroke:#15803d,stroke-width:1.5px,color:#14532d
+    classDef fail fill:#fee2e2,stroke:#b91c1c,stroke-width:1.5px,color:#7f1d1d
+    classDef gate fill:#fef3c7,stroke:#b45309,stroke-width:1.5px,color:#78350f
+    classDef nodeStyle fill:#f1f5f9,stroke:#64748b,stroke-width:1.5px,color:#0f172a
+
+    class C,D gate
+    class Drop1,Drop2,Deny fail
+    class F ok
+    class A,B,E nodeStyle
+```
 
 Remembering and understanding these is **very** helpful and satisfying.
 
 ### SSH config
 
 Now lets make it easier, it is the ssh daemon which manage the above connection, they read a config file,  
-`~/.ssh/config`, if not already made, create it.  
-Now configure it, ask some llm what exactly.
+`~/.ssh/config`, if not already made, create it. <- PAC  
+Then configure it, ask some llm what exactly to do.
 
-Here's an scaffolding from my setup,
+Here's an scaffolding from my setup:
 
-```text
+```bash
 Host oracler
     User ubuntu
     HostName [oracle/Public_IP]
@@ -202,14 +258,42 @@ Hostname is interesting, its initially the public IP of the server, but later wh
 
 Tailscale is a decentralised VPN that makes your server and your local machine part of the same private network, so you can access it without exposing them to the public internet <- PAC.
 
-[set it up](https://tailscale.com/) on both your server and your local machine.
-Basically download and login with same account and add as a service with systemd, follow the docs or ask ai.
-Once set up, you can replace public IP from above step to the tailscale hostname in your ssh config, and ssh into your server without exposing it to the public internet(bypass the need for dealing with the layer 1 defence from above).
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "ui-monospace, SFMono-Regular, Menlo, monospace",
+    "fontSize": "13px",
+    "lineColor": "#64748b",
+    "primaryTextColor": "#0f172a"
+  }
+}}%%
+flowchart TD
+    subgraph PUBLIC ["🌐 Public Internet"]
+        Attacker(["Random internet traffic"]) -.->|"blocked at VCN / iptables"| PublicIP["Oracle VPS (Public IP)"]
+    end
+
+    subgraph TAILNET ["🔒 Tailscale Private Mesh (WireGuard)"]
+        Laptop["💻 Developer Laptop<br/>100.x.y.z"] <===>|"encrypted tunnel / MagicDNS: 'oracle'"| VPS["🖥️ Oracle VPS<br/>100.a.b.c"]
+    end
+
+    classDef mesh fill:#e0e7ff,stroke:#4338ca,stroke-width:2px,color:#312e81
+    classDef pub fill:#f8fafc,stroke:#94a3b8,color:#334155
+    classDef block fill:#fee2e2,stroke:#b91c1c,stroke-width:1.5px,color:#7f1d1d
+
+    class TAILNET,Laptop,VPS mesh
+    class PUBLIC,PublicIP pub
+    class Attacker block
+```
+
+[set it up](https://tailscale.com/) on both your server and your local machine.  
+Basically download and login with same account and add as a service with systemd, follow the docs or ask ai.  
+Once set up, you can replace public IP from above step to the tailscale hostname in your ssh config, and ssh into your server without exposing it to the public internet (bypass the need for dealing with the layer 1 defence from above).
 
 You might have to open the port 41641 in the cloud firewall and iptables for tailscale to work,
 if things are not working ask ai how to check and do it.
 
-Theres a lot one can do with tailscale, explore.
+Theres a lot one can do with tailscale, explore!
 
 ## The mental model I was missing
 
@@ -281,7 +365,7 @@ flowchart TD
 
 ↑ PAC
 
-*Caption: three gatekeepers before your code ever runs. Any one can say no, and none of them will tell you. As you saw above*
+*Caption: (three gatekeepers before your code ever runs. Any one can say no, and none of them will tell you. As you saw above)*
 
 \* This uses specific things name, for eg there could be systemd or nginx in place of caddy, though above is a good default
 
@@ -292,7 +376,7 @@ Read about Host = IP:port, difference bw `0.0.0.0` and `localhost`
 
 ## It runs, you close the laptop, it stops
 
-Your first task while deploying is making things work locally, on your own laptop or the SSH session.
+Your first task while deploying is making things work locally, on your own laptop or the SSH session.  
 Then comes persistence, when you close the session or wifi drops, the site dies with it, because your program was a child of your login session and the session ended.
 
 The usual first fixes are `nohup` and `tmux`. Both survive logout. Neither restarts your app
@@ -304,7 +388,7 @@ It started every other service on your box and will happily start yours, spend s
 
 Every other program you can use for this purpose is an abstraction over it, pm2, docker, etc.
 
-Learn things like `systemctl status agent`, `journalctl -u agent`, `systemctl enable agent`, `systemctl restart agent`, etc.
+Learn things like `systemctl status agent`, `journalctl -u agent`, `systemctl enable agent`, `systemctl restart agent`, etc.  
 They help a bunch in debugging and managing your service, while doing other tasks also.
 
 My very first attempt, from that earlier server, for representational purposes, mine was better ofc:
@@ -318,7 +402,7 @@ ExecStart=uv run main.py
 StandardOutput=append:logs/server.log
 ```
 
-*Caption: four separate mistakes in four lines. Can you spot them?*
+*Caption: (four separate mistakes in four lines. Can you spot them?)*
 
 PAC ↓ (keeps changing, diff envs, diff versions, etc etc, representational and helpful)
 
@@ -332,16 +416,16 @@ Main PID: 3476 (code=exited, status=203/EXEC)
 WorkingDirectory= path is not absolute: ~/raghav/Agent_kdg
 ```
 
-*Caption: three error strings worth memorising. You will meet all of them.*
+*Caption: (three error strings worth memorising. You will meet all of them)*
 
-**`path is not absolute: ~/...`** means systemd does not expand `~`. Tilde expansion is a
-*shell* feature and there is no shell here. Same for `$HOME`, globs, and `&&`.
+**`path is not absolute: ~/...`** means systemd does not expand `~`.  
+Tilde expansion is a *shell* feature and there is no shell here. Same for `$HOME`, globs, and `&&`.
 
 **`status=203/EXEC`** means systemd could not execute what you named. Wrong path, missing
 file, or missing execute bit.
 
-**`Loaded: bad-setting`** means the unit file is invalid, so nothing ever ran. That differs
-from `Loaded: loaded` plus `Active: failed`, which means your program started and exited.
+**`Loaded: bad-setting`** means the unit file is invalid, so nothing ever ran.  
+That differs from `Loaded: loaded` plus `Active: failed`, which means your program started and exited.
 One is your config, the other is your code.
 
 A quieter fourth: relative paths in `StandardOutput=append:logs/server.log` resolve against
@@ -356,16 +440,16 @@ pgrep -f "uv run main.py"
 # nothing. no error. no output.
 ```
 
-*Caption: because philosophy of posix is no message on succeed, silence is the worst error message.*
+*Caption: (because philosophy of posix is no message on succeed, silence is the worst error message)*
 
-`ExecStart` said `uv`, and systemd has no idea where that is. **systemd does not read your
-`.bashrc`.** Neither does cron, nor `ssh host "command"`, which is how your CI will deploy.
+`ExecStart` said `uv`, and systemd has no idea where that is.  
+**systemd does not read your `.bashrc`.** Neither does cron, nor `ssh host "command"`, which is how your CI will deploy.  
 Every tool in your home directory is invisible to all three. Run `which uv`, paste the full
 path.
 
 ## Nothing can reach it, caddy 1
 
-Here we'll setup a reverse proxy, which acc to the analogy I used with my friend is like a portal master or gatekeeper+receptionist, we'll come back to this analogy in next section.
+Here we'll setup a reverse proxy, which acc to the analogy I used with my friend is like a portal master or reception (gatekeeper + receptionist), we'll come back to this analogy in next section.
 
 Before we install anything next is an important concept to understand.
 
@@ -383,19 +467,24 @@ LISTEN  127.0.0.1:2056   bun     ← unreachable from outside
 LISTEN          *:443    caddy   ← the only public door
 ```
 
-*Caption: same machine, same kind of app, completely different exposure.*
+*Caption: (same machine, same kind of app, completely different exposure)*
 
-Since most examples only show `port`, people make very suboptimal choices even when they have a reverse proxy.
+Since most examples only show `port`, people make very suboptimal choices even when they have a reverse proxy.  
 It's such a waste to have a portal master when labeled portals exist and anyone can walk in (okay there are locks, but yk can be cracked).  
 For eg in Bun, `Bun.serve({ port: PORT })` with no hostname binds `0.0.0.0`.  
 Pass `Bun.serve({ port: PORT, hostname: "127.0.0.1" })` instead.  
 Ask an AI how to use localhost for your stack in production, not just dev.
 
-**Layer two is the host firewall.** Same `ufw` stuff from before, we don't have it on our machine, ignore that all.
+**Layer two is the host firewall.** Same `ufw` stuff from before, we don't have it on our machine, ignore that all.  
 Rules are raw iptables with a default DROP policy, saved with `netfilter-persistent`, ask ai how to do it.  
 
-PAC ↓
+PAC ↓  
 And while you are in there: **never run `iptables -F` on Oracle Cloud.** The default rules carry cloud metadata, DHCP, NTP, and the iSCSI mount for your boot volume. Flushing them can cost you the root disk.
+
+![iptables flush warning](image-6.png)
+
+*Caption: (flushing iptables drops the iSCSI network mount to your root boot volume on Oracle Cloud)*
+
 \*BTW I did run this lol following an AI guide, and it cost me more than 15 minutes of debugging, that too because i had the record of how my iptables look like in personal documentation.
 
 **Layer three is the cloud firewall**, invisible from inside the machine.  
@@ -404,34 +493,95 @@ Make sure to open 80 and 443 for your public IP, respectively for http and https
 
 \*BTW this firewall only comes into play when using the VCN provided by Oracle, if you're doing anything via tailscale stuff, its bypassed, dw about it.
 
-PAC ↓
+PAC ↓  
 To identifies the layer with problem look at the *shape* of the failure, not the message:
 
 - Hangs, then times out → a firewall dropped it silently. Layer two or three.
 - Instant `connection refused` → it reached your machine, nothing was listening. Layer one.
 - Connects, then nothing → your app is broken.
 
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "ui-monospace, SFMono-Regular, Menlo, monospace",
+    "fontSize": "13px",
+    "lineColor": "#64748b",
+    "primaryTextColor": "#0f172a"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 35, "rankSpacing": 45 }
+}}%%
+flowchart TD
+    Start["🌐 Request sent to server"] --> Sym{What is the failure symptom?}
+
+    Sym -->|"Hangs, then times out"| F1["🔥 Firewall Issue<br/>Layer 2 (iptables) or Layer 3 (OCI VCN)"]
+    Sym -->|"Instant 'connection refused'"| F2["🔌 Binding Issue<br/>Layer 1 (nothing listening on port/interface)"]
+    Sym -->|"HTTP 502 / empty 200 / 403"| F3["💥 Application Issue<br/>App crashed, bad proxy route, or file permissions"]
+
+    classDef hang fill:#fee2e2,stroke:#b91c1c,stroke-width:1.5px,color:#7f1d1d
+    classDef ref fill:#fef3c7,stroke:#b45309,stroke-width:1.5px,color:#78350f
+    classDef app fill:#e0e7ff,stroke:#4338ca,stroke-width:1.5px,color:#312e81
+    classDef startNode fill:#f1f5f9,stroke:#64748b,stroke-width:1.5px,color:#0f172a
+
+    class Start startNode
+    class F1 hang
+    class F2 ref
+    class F3 app
+```
+
 Now install the proxy you want to nginx, caddy, apache, whatever this part is hard to get wrong so set it up also.
 
-Also Before you have a proxy, `0.0.0.0` is the *correct* answer and
-`127.0.0.1` will drive you mad, because nothing outside can reach it, including you.  
+Also Before you have a proxy, `0.0.0.0` is the *correct* answer and `127.0.0.1` will drive you mad, because nothing outside can reach it, including you.  
 Once a proxy exists, everything moves back to loopback, thats because its that proxy running at `0.0.0.0` and it is the one that is reachable from outside, something has to be yk.
 
 ## The Portal master, caddy 2
 
-Or as AI asked me to call it the reception.
+_Or as AI asked me to call it the reception._
 
 Eventually you want to host another project or a friend wants to host their project on your box too, and there is exactly one port set 80 and 443, thats where reverse proxy comes in.
 
 Actuallly for me, His service came before mine XD, I was not a web-dev guy and then one day wanted to host my own project, so I had to learn this part.  
 BTW I wager if you're a UIET junior, a bunch of you would have had hit my server, because of that friends service, delayed Hello!
 
-This is the way I ended up explaining this out loud, recording in a tts chatgpt session.
-The chat also went in while creating this blog.
-**The proxy is the reception of your server for web requests.** The public IP is the building
-address, your backends are departments upstairs, the receptionist tells a request to go to which.
-Also nobody walks in off the street and straight into a department from reception, we have security also.
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "ui-monospace, SFMono-Regular, Menlo, monospace",
+    "fontSize": "13px",
+    "lineColor": "#64748b",
+    "primaryTextColor": "#0f172a"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 35, "rankSpacing": 45 }
+}}%%
+flowchart TD
+    Client1["🌐 Request: api.example.com"] --> Entrance["🏢 Public Building Entrance (:443)"]
+    Client2["🌐 Request: raghav56.tech"] --> Entrance
 
+    Entrance --> Desk["🛎️ Reception Desk (Caddy Reverse Proxy)"]
+
+    subgraph DEPARTMENTS ["🏢 Internal Offices (127.0.0.1)"]
+        Desk -->|"Host: api.example.com"| Room1["Room 5001: Bun Backend"]
+        Desk -->|"Host: raghav56.tech"| Room2["Room 3000: Web App"]
+        Desk -->|"Host: unknown"| Room3["🚫 Deny Entry (444/404)"]
+    end
+
+    classDef desk fill:#4338ca,stroke:#312e81,stroke-width:2px,color:#ffffff
+    classDef room fill:#dcfce7,stroke:#15803d,stroke-width:1.5px,color:#14532d
+    classDef deny fill:#fee2e2,stroke:#b91c1c,stroke-width:1.5px,color:#7f1d1d
+    classDef client fill:#f1f5f9,stroke:#64748b,stroke-width:1.5px,color:#0f172a
+
+    class Desk desk
+    class Room1,Room2 room
+    class Room3 deny
+    class Client1,Client2,Entrance client
+```
+
+This is the way I ended up explaining this out loud, recording in a tts chatgpt session.
+The chat also went in while creating this blog.  
+**The proxy is the reception of your server for web requests.** The public IP is the building
+address, your backends are departments upstairs, the receptionist tells a request to go to which.  
+Also nobody walks in off the street and straight into a department from reception, we have security also.  
 ↑ PAC, some don't have it set u well enough for the analogy to hold,
 
 - There might be just a gate no walls, anyone can side step and walk in, the localhost vs `0.0.0.0` thing.
@@ -458,7 +608,7 @@ proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
 proxy_set_header X-Forwarded-Proto $scheme;
 ```
 
-*Caption: forget the last line and your HTTPS site starts emitting http:// links.*
+*Caption: (forget the last line and your HTTPS site starts emitting `http://` links)*
 
 Also also, we have not even talked about DNS and HTTPS (the tls/ssl thing) above thats way hard with nginx. <- PAC
 
@@ -471,13 +621,32 @@ api.example.com {
 }
 ```
 
-*Caption: obtains a certificate, renews it forever, redirects HTTP to HTTPS, sets all four headers, enables HTTP/2 and HTTP/3.*
+```text
+  NGINX (Manual TLS, Explicit Headers)      CADDY (Automatic TLS & Proxy)
+┌────────────────────────────────────────┐ ┌────────────────────────────────┐
+│ server {                               │ │ api.example.com {              │
+│   server_name api.example.com;         │ │   reverse_proxy localhost:5001 │
+│   listen 443 ssl;                      │ │ }                              │
+│   ssl_certificate /etc/letsencrypt/...;│ └────────────────────────────────┘
+│   ssl_certificate_key /etc/...;        │   • Automatic Let's Encrypt TLS
+│   location / {                         │   • Automatic HTTP -> HTTPS redirect
+│     proxy_pass http://localhost:5001;  │   • Automatic Host & X-Forwarded-*
+│     proxy_set_header Host $host;       │   • HTTP/2 & HTTP/3 out of the box
+│     proxy_set_header X-Real-IP $remote;│
+│     proxy_set_header X-Forwarded-For;  │
+│     proxy_set_header X-Forwarded-Proto;│
+│   }                                    │
+│ }                                      │
+└────────────────────────────────────────┘
+```
+
+*Caption: (obtains a certificate, renews it forever, redirects HTTP to HTTPS, sets all four headers, enables HTTP/2 and HTTP/3.)*
 
 DNS and HTTPS will be stubs here, in detail maybe in some other blog, maybe read and explore yourself till then. They're so cool! or as someone told me, I try to see the coolness in all these technologies, it helps.
 
 ## Process Management
 
-There are many types of services, in here it gets very "depends" on what you're doing,
+There are many types of services, in here it gets very "depends" on what you're doing,  
 I've personally done 4 kinds:
 
 - Web frontend managed by some service
@@ -489,21 +658,21 @@ There are so many caveats and things idk that super PAC.
 
 I'll give info on two things.
 
-### Services: what I've been implicitly assuming you're working with till now
+### Services: What I've been implicitly assuming you're working with till now
 
 Design a good caddyfile (or equivalent), take help of documentation and AI.
 
-You can use things like PM2 or OxManager or some load balancer, or whatever.
+You can use things like PM2 or OxManager or some load balancer, or whatever.  
 Just know this exists and look at the info if you encounter the need.
 
 Yeah so just ignore the next sub-section on static, done.
 
 ### Static: The 403 that redesigned my server
 
-This has mostly to do with me learning and the curling my website in bash thing I mentioned at the start.
+This has mostly to do with me learning and the curling my website in bash thing I mentioned at the start.  
 If you did not, and are reading this section, DO TRY, it is so cool!
 
-My first attempt at serving files pointed the web server straight at my project folder.
+My first attempt at serving files pointed the web server straight at my project folder.  
 Every request returned `403` with a `content-length` of zero. No message. DNS fine. TLS fine. Routing
 fine. The file existed and `ls -l` said it was world readable.
 
@@ -519,7 +688,7 @@ drwx------ ubuntu ubuntu raghav          ← 700. there it is.
 -rw-rw-r-- ubuntu ubuntu index.txt       ← world readable, and irrelevant
 ```
 
-*Caption: `namei -l` walks every directory in a path. `ls -l` on the file lies to you.*
+*Caption: (`namei -l` walks every directory in a path. `ls -l` on the file lies to you.)*
 
 **Directory permissions compose.** To read a file you need traverse permission on every
 directory above it. Project being readable meant nothing, because a folder two levels up was
@@ -529,9 +698,25 @@ The obvious fix is `chmod 755` on your home directory. Do not. That makes every 
 key, and dotfile you own readable by every other account on the machine, to fix one file.
 
 The source tree should stay `700` and the web server genuinely *cannot* and *should not* read it.  
-Have the build compile into a separate folder, copies the output to `/var/www`, which holds nothing but HTML, CSS and images. If a
-file server ever has a path traversal bug, it leaks pages that were already public instead
-of my `.env`, my SSH keys, and my `.git` directory.
+Have the build compile into a separate folder, copies the output to `/var/www`, which holds nothing but HTML, CSS and images.  
+If a file server ever has a path traversal bug, it leaks pages that were already public instead of my `.env`, my SSH keys, and my `.git` directory.
+
+```text
+PATH TRAVERSAL EVALUATION FOR NGINX / CADDY:
+
+/                            [drwxr-xr-x  755]  root:root       ✅ Traversed
+└── home/                    [drwxr-xr-x  755]  root:root       ✅ Traversed
+    └── ubuntu/              [drwxr-x---  750]  ubuntu:ubuntu   ✅ Allowed (if www-data in group)
+        └── raghav/          [drwx------  700]  ubuntu:ubuntu   ❌ BLOCKED (No traverse permission)
+            └── site/
+                └── static/
+                    └── index.txt [rw-rw-r--  644] (Irrelevant! Cannot reach here)
+
+SECURE ARCHITECTURE SOLUTION:
+/var/www/                    [drwxr-xr-x  755]  root:root       ✅ Traversed
+└── site/index.txt           [rw-r--r--   644]  www-data        ✅ Served safely
+(Private source code and .env remain protected at 700 in /home/ubuntu)
+```
 
 <!-- PULL QUOTE -->
 > The 403 was not a problem to work around. It was the filesystem telling me my design was wrong.
@@ -548,7 +733,8 @@ They give a bunch of other stuff also, explore, used to even more ;-;
 
 ## HTTPS: Certificates are easy. Renewals are where you fail
 
-First thing first, HTTPS and SSL certificates are free, I've seen people doing pretty weird stuff there, like paying or fee trials with anonymous emails, beware.
+First thing first, HTTPS and SSL certificates are free,  
+I've seen people doing pretty weird stuff there, like paying or fee trials with anonymous emails, beware.
 
 With Caddy no such below thing is required, it manages the certificates for services using the below mentioned service automatically.
 
@@ -556,14 +742,31 @@ With Caddy no such below thing is required, it manages the certificates for serv
 Keeping one is the hard part, and a certificate that stops renewing takes your site down ninety days
 after you last thought about it.
 
-PAC, Caveat:
+PAC, Caveat:  
 On my box, as I write this, **2 certificates have broken renewal**, for two different
-reasons something backward compatibility and sub-domains and very specific stuff, though I've made it work via "jugaad" and why fix something not broken.
+reasons something backward compatibility and sub-domains and very specific stuff, though I've made it work via "jugaad" and why fix something not broken.  
 Do it cleanly when you do.
 
 A third trap waits even when renewal works: the hooks directory is empty by default, so
 nothing reloads your web server afterwards. The certificate on disk is fresh, the one being
 served is expired, and every check against the file says everything is fine.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "ui-monospace, SFMono-Regular, Menlo, monospace",
+    "fontSize": "13px",
+    "lineColor": "#64748b",
+    "primaryTextColor": "#0f172a"
+  }
+}}%%
+timeline
+    title The 90-Day Silent TLS Renewal Trap
+    Day 0  : Certbot runs successfully : Padlock active 🔒 : Site in production
+    Day 60 : Auto-renew triggers in background : Trap 1 - manual DNS hook hangs : Trap 2 - nginx cert plugin looks for dead process : Trap 3 - cert renews on disk but daemon never reloads
+    Day 90 : Certificate Expires : Browser red screen : 3 AM outage alert 🚨
+```
 
 Run `sudo certbot renew --dry-run`, which will surface all three at once. Write the
 reload hook. Or, if you do not specifically need a wildcard certificate, use Caddy and skip
@@ -588,6 +791,15 @@ Here is a list of very frustrating ones I've faced:
 
 The order that works: get the machine, get *something* responding on a port, put a proxy in
 front, add a process manager, add the domain, add TLS, then automate the deploy.
+
+| Phase | Details |
+| :--- | :--- |
+| 1. PROVISION | Oracle Cloud Always Free (ARM 2-4 Cores / 12-24 GB) |
+| 2. SECURE ACCESS | Tailscale Mesh Network + `~/.ssh/config` |
+| 3. SUPERVISION | systemd Service Unit (Absolute paths, auto-restart) |
+| 4. REVERSE PROXY | Caddy on Port 80/443 (Reverse proxy to 127.0.0.1) |
+| 5. DNS & TLS | GitHub Student Pack (.tech domain) + Auto Let's Encrypt |
+| 6. STATIC ASSETS | Build pipeline copying to `/var/www` (keep source 700) |
 
 - [Oracle Cloud Always Free](https://www.oracle.com/cloud/free/) for the server
 - [GitHub Student Developer Pack](https://education.github.com/pack) for a free `.tech` domain
